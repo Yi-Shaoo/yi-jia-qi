@@ -59,15 +59,24 @@ bun run start      # 生产模式启动（需要先 build，并设置环境变�
 bunx shadcn-svelte@latest add <组件名> --yes   # 再加 shadcn 组件
 ```
 
+## 持续集成
+
+向 `main` 推送或提交目标为 `main` 的 PR 时，[GitHub Actions CI](.github/workflows/ci.yml) 会从干净检出运行两项检查：
+
+- 用锁定的 Bun 依赖运行 `bun run check` 和 `bun run build`，能发现本地存在但漏提交的源码。
+- 按 `docker-compose.yml` 构建并启动生产镜像，验证 `/api/health` 和首页的构建产物引用，然后清理测试容器和卷。CI 不使用生产密码，也不会发布镜像或触发部署命令。
+
 ## 部署到 Coolify
 
 1. Coolify 里新建资源，选这个 Git 仓库，Build Pack 选 **Docker Compose**（用仓库里的 `docker-compose.yml`）。
    也可以选 **Dockerfile**，然后自己加一个持久化存储挂到 `/data`，端口填 `3000`。
-2. 在 Environment Variables 里填：
+2. 在 Environment Variables 里填以下变量。它们只在容器运行时使用：保留 Runtime，关闭 Build time。
    - `YI_PASSWORD`、`JQ_PASSWORD`：两个人的密码（不能一样）
    - `SESSION_SECRET`：随机字符串，用 `openssl rand -hex 32` 生成
 3. 在服务的 Domains 里填域名（例如 `https://us.example.com`），Coolify 会自动配 HTTPS。
 4. 部署。健康检查地址是 `/api/health`。
+
+如果 Coolify 只显示 `exit code: 1`，查看该次部署的完整构建日志，找到 Vite 输出的第一条错误。也可以在有 Docker 的机器上运行 `docker build --progress=plain .` 复现，构建不需要设置登录密码或 `SESSION_SECRET`。
 
 **数据都在 `/data` 卷里**（`yijiaqi.sqlite` + `files/` 照片）。备份就是备份这个卷；Coolify 的 Persistent Storage 里可以看到。
 

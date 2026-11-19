@@ -23,8 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# 运行时数据（SQLite + 照片），不要提交
-data/
+# 只忽略仓库根目录的运行时数据（SQLite + 照片），保留 src/lib/data/ 源码
+/data/
 /legacy/
 .env
 .env.*
