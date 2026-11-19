@@ -1,0 +1,11 @@
+node_modules
+dist
+data
+legacy
+.git
+.env
+.env.*
+*.log
+.DS_Store
+Yi & Jia Qi.html
+assets
