@@ -1,0 +1,223 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 方案 B · 海岸 Coastal
+ * 沙色底 + 太平洋蓝（主色）+ 日落珊瑚（强调）+ 胶片橘（日期戳）
+ * shadcn-svelte 组件读的是下面这些变量，改颜色只改这里。
+ */
+:root {
+	--radius: 1rem;
+
+	--background: #faf6ef;
+	--foreground: #14253d;
+	--card: #ffffff;
+	--card-foreground: #14253d;
+	--popover: #ffffff;
+	--popover-foreground: #14253d;
+	--primary: #1f5f86;
+	--primary-foreground: #ffffff;
+	--secondary: #e3eef5;
+	--secondary-foreground: #173f5a;
+	--muted: #f2ece1;
+	--muted-foreground: #5b6779;
+	--accent: #fde8e2;
+	--accent-foreground: #7d2a1f;
+	--destructive: #c4493a;
+	--border: #e9e1d3;
+	--input: #e2d8c6;
+	--ring: #1f5f86;
+
+	/* 方案 B 的额外颜色 */
+	--coral: #c4493a;
+	--coral-soft: #fde8e2;
+	--sea: #1f5f86;
+	--sea-soft: #e3eef5;
+	--sun: #e8833a;
+	--sand: #f6ead2;
+	--sand-ink: #5e4310;
+	--night: #14253d;
+	--night-ink: #f3efe6;
+	--stamp: #ff9a4a;
+	--yi: #c4493a;
+	--yi-soft: #fde8e2;
+	--jq: #1f5f86;
+	--jq-soft: #e3eef5;
+
+	--chart-1: #1f5f86;
+	--chart-2: #c4493a;
+	--chart-3: #e8833a;
+	--chart-4: #3f9e78;
+	--chart-5: #8467d4;
+
+	--sidebar: #faf6ef;
+	--sidebar-foreground: #14253d;
+	--sidebar-primary: #1f5f86;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #f2ece1;
+	--sidebar-accent-foreground: #14253d;
+	--sidebar-border: #e9e1d3;
+	--sidebar-ring: #1f5f86;
+}
+
+.dark {
+	--background: #0c1320;
+	--foreground: #e8eef6;
+	--card: #141e2f;
+	--card-foreground: #e8eef6;
+	--popover: #141e2f;
+	--popover-foreground: #e8eef6;
+	--primary: #86bdd8;
+	--primary-foreground: #0c1320;
+	--secondary: #17303f;
+	--secondary-foreground: #cfe6f3;
+	--muted: #1a2638;
+	--muted-foreground: #97a5b9;
+	--accent: #3a2030;
+	--accent-foreground: #ffc4b6;
+	--destructive: #ff8a7a;
+	--border: #24324a;
+	--input: #2b3b55;
+	--ring: #86bdd8;
+
+	--coral: #ff8f7d;
+	--coral-soft: #3a2030;
+	--sea: #86bdd8;
+	--sea-soft: #17303f;
+	--sun: #ffa25c;
+	--sand: #2e2717;
+	--sand-ink: #f3dca8;
+	--night: #e8eef6;
+	--night-ink: #0c1320;
+	--stamp: #ffa45c;
+	--yi: #ff8f7d;
+	--yi-soft: #3a2030;
+	--jq: #86bdd8;
+	--jq-soft: #17303f;
+}
+
+@theme inline {
+	--font-sans: "Noto Sans SC", -apple-system, "PingFang SC", system-ui, sans-serif;
+	--font-display: "Bricolage Grotesque", "Noto Sans SC", system-ui, sans-serif;
+	--font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+
+	--radius-sm: calc(var(--radius) - 6px);
+	--radius-md: calc(var(--radius) - 4px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	--color-coral: var(--coral);
+	--color-coral-soft: var(--coral-soft);
+	--color-sea: var(--sea);
+	--color-sea-soft: var(--sea-soft);
+	--color-sun: var(--sun);
+	--color-sand: var(--sand);
+	--color-sand-ink: var(--sand-ink);
+	--color-night: var(--night);
+	--color-night-ink: var(--night-ink);
+	--color-stamp: var(--stamp);
+	--color-yi: var(--yi);
+	--color-yi-soft: var(--yi-soft);
+	--color-jq: var(--jq);
+	--color-jq-soft: var(--jq-soft);
+
+	--animate-pop: pop 0.35s ease-out;
+	--animate-beat: beat 0.4s ease-out;
+	--animate-float-up: float-up 0.85s ease-out forwards;
+	--animate-shake: shake 0.9s ease-in-out;
+}
+
+@keyframes pop {
+	0% { transform: scale(0.85); opacity: 0; }
+	60% { transform: scale(1.04); opacity: 1; }
+	100% { transform: scale(1); }
+}
+@keyframes beat {
+	0% { transform: scale(1); }
+	35% { transform: scale(1.18); }
+	100% { transform: scale(1); }
+}
+@keyframes float-up {
+	0% { transform: translate(0, 0) scale(0.6); opacity: 1; }
+	100% { transform: translate(var(--dx, 0), var(--dy, -40px)) scale(1.1); opacity: 0; }
+}
+@keyframes shake {
+	0%, 100% { transform: rotate(0); }
+	20% { transform: rotate(-6deg); }
+	40% { transform: rotate(5deg); }
+	60% { transform: rotate(-4deg); }
+	80% { transform: rotate(3deg); }
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	html {
+		-webkit-tap-highlight-color: transparent;
+	}
+	body {
+		@apply bg-background text-foreground font-sans antialiased;
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+	}
+	h1, h2, h3, h4 {
+		@apply font-display tracking-tight;
+	}
+}
+
+@layer components {
+	/* 小号等宽大写标签，例如 "TODAY · 11.19 THU" */
+	.eyebrow {
+		@apply font-mono text-xs uppercase tracking-[0.08em] text-coral;
+	}
+	/* 胶片相机日期戳 */
+	.film-stamp {
+		@apply font-mono tracking-[0.06em] text-stamp;
+		text-shadow: 0 0 6px color-mix(in srgb, var(--stamp) 70%, transparent);
+	}
+	/* 拍立得 */
+	.polaroid {
+		@apply bg-white p-3 pb-4 rounded-[4px] text-[#14253d];
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 24px rgb(20 37 61 / 0.1);
+	}
+	.dark .polaroid {
+		@apply bg-[#f4efe6];
+	}
+}

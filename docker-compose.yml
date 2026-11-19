@@ -1,0 +1,25 @@
+# Coolify：新建资源时选 “Docker Compose”，指向这个仓库即可。
+# 在 Coolify 的 Environment Variables 里填 YI_PASSWORD / JQ_PASSWORD / SESSION_SECRET，
+# 域名在服务的 Domains 里设置（端口 3000）。
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      - YI_PASSWORD=${YI_PASSWORD:?请设置 YI_PASSWORD}
+      - JQ_PASSWORD=${JQ_PASSWORD:?请设置 JQ_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET:?请设置 SESSION_SECRET}
+      - SESSION_DAYS=${SESSION_DAYS:-180}
+      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-15}
+    volumes:
+      - yjq-data:/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  yjq-data:
