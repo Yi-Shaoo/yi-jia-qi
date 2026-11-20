@@ -203,6 +203,14 @@
 	}
 }
 
+/* 手写签名：首页封面与约会日记明信片共用 */
+@font-face {
+	font-family: Pacifico;
+	src: url("/fonts/pacifico/pacifico-latin.woff2") format("woff2");
+	font-weight: 400;
+	font-display: swap;
+}
+
 @layer components {
 	/* 小号等宽大写标签，例如 "TODAY · 11.19 THU" */
 	.eyebrow {

@@ -1,5 +1,48 @@
 import { test, expect } from "./fixture";
 
+test("封面照片上半部保留原色，桌面白色手写签名压在左下暗角，窄屏签名在照片下方", async ({ page, app }) => {
+	await app.put("meta", "shared", { hero: await app.photo() });
+	await page.goto("/");
+	const image = page.getByRole("img", { name: "我们的封面照片" });
+	await image.evaluate((el: HTMLImageElement) => el.decode());
+	for (const width of [1280, 390, 320]) {
+		await page.setViewportSize({ width, height: 800 });
+		const screenshot = await image.screenshot({ animations: "disabled" });
+		const [original, left, middle] = await image.evaluate(async (el: HTMLImageElement, data) => {
+			const frame = new Image();
+			frame.src = `data:image/png;base64,${data}`;
+			await frame.decode();
+			const canvas = document.createElement("canvas");
+			canvas.width = frame.width; canvas.height = frame.height;
+			const ctx = canvas.getContext("2d")!;
+			const pixel = (x: number, y: number) => Array.from(ctx.getImageData(x, y, 1, 1).data);
+			ctx.drawImage(el, 0, 0);
+			const source = pixel(0, 0);
+			ctx.drawImage(frame, 0, 0);
+			return [source, pixel(frame.width * .1, frame.height * .1), pixel(frame.width * .5, frame.height * .1)];
+		}, screenshot.toString("base64"));
+		expect(left).toEqual(original);
+		expect(middle).toEqual(original);
+		const heading = page.getByRole("heading", { level: 1 });
+		const photo = (await image.boundingBox())!, title = (await heading.boundingBox())!;
+		const look = await heading.evaluate(async (el) => {
+			await document.fonts.ready;
+			const shade = getComputedStyle(el.closest("section")!.firstElementChild!, "::after").backgroundImage;
+			return { color: getComputedStyle(el).color, script: document.fonts.check("40px Pacifico"), shade };
+		});
+		expect(look.script).toBe(true);
+		if (width < 768) {
+			expect(title.y).toBeGreaterThanOrEqual(photo.y + photo.height);
+			expect(look.shade).toBe("none");
+		} else {
+			expect(title.y + title.height).toBeLessThanOrEqual(photo.y + photo.height);
+			expect(title.x).toBeLessThan(photo.x + photo.width * 0.4);
+			expect(look.color).toBe("rgb(255, 255, 255)");
+			expect(look.shade).toContain("radial-gradient");
+		}
+	}
+});
+
 test("节日卡使用薄荷色，日期在两种外观下均随卡片文字配色", async ({ page, app }) => {
 	await app.docs("meta");
 	await page.goto("/");

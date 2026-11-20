@@ -124,36 +124,37 @@
 </script>
 
 <!-- 封面 -->
-<section class="relative -mx-4 mt-1 h-[274px] overflow-hidden bg-[#224957] md:mx-0 md:mt-2 md:h-[370px] md:rounded-3xl">
-	{#if shared.hero}
-		<img src={fileUrl(shared.hero)} alt="我们的封面照片" class="size-full object-cover object-[center_60%]" />
-	{:else}
-		<img src="/coast.svg" alt="" class="size-full object-cover object-[76%_center]" />
-	{/if}
-	<div class="absolute inset-0 bg-[linear-gradient(90deg,rgb(10_24_40/.79),rgb(10_24_40/.49)_60%,transparent),linear-gradient(0deg,rgb(10_24_40/.42),transparent_80%)] md:bg-[linear-gradient(90deg,rgb(10_24_40/.8),rgb(10_24_40/.56)_43%,transparent_78%)]"></div>
-	<div class="absolute bottom-14 left-5 text-white md:bottom-20 md:left-12">
-		<div class="film-stamp mb-2 text-sm md:text-xl">'26 11 05</div>
-		<h1 class="font-display text-[44px] leading-[0.95] font-extrabold text-white md:text-[88px]">Yi &amp; Jia Qi</h1>
-		<p class="mt-2 text-[15px] md:mt-3 md:text-lg">UCI ⇄ UCLA，405 号公路两头的我们</p>
-		<Button href="/diary?write=today" variant="secondary" class="mt-4 rounded-full bg-white px-4 text-[#14253d] hover:bg-white/90 md:hidden"><PenLine />{diaryAction.label}</Button>
+<section class="cover relative -mx-4 mt-1 md:mx-0 md:mt-2">
+	<div class="cover-photo relative h-[clamp(10.5rem,52vw,16rem)] overflow-hidden bg-[#224957] md:h-[370px] md:rounded-3xl">
+		{#if shared.hero}
+			<img src={fileUrl(shared.hero)} alt="我们的封面照片" class="size-full object-cover object-[center_60%]" />
+		{:else}
+			<img src="/coast.svg" alt="" class="size-full object-cover object-[76%_center]" />
+		{/if}
+		<time class="cover-date" datetime="2026-11-05" aria-label="2026 年 11 月 5 日">'26 11 05</time>
+		<Button
+			variant="secondary"
+			size="icon"
+			aria-label={heroBusy ? "正在上传封面" : "换一张封面"}
+			title={heroBusy ? "正在上传封面" : "换一张封面"}
+			class="absolute top-3 right-3 z-[2] size-11 rounded-full bg-black/45 text-white hover:bg-black/65 md:top-6 md:right-6"
+			disabled={heroBusy || !meta.ready}
+			onclick={() => heroInput.click()}
+		>
+			<ImageIcon aria-hidden="true" />
+		</Button>
+	</div>
+	<div class="cover-signature">
+		<h1 class="cover-name">Yi <span class="cover-and">and</span> Jia Qi</h1>
+		<p class="cover-caption">UCI ⇄ UCLA，405 号公路两头的我们</p>
+		<Button href="/diary?write=today" variant="secondary" class="cover-write rounded-full px-3 md:hidden"><PenLine />{diaryAction.label}</Button>
 	</div>
 	<input bind:this={heroInput} type="file" accept="image/*" class="hidden" onchange={changeHero} />
-	<Button
-		variant="secondary"
-		size="icon"
-		aria-label={heroBusy ? "正在上传封面" : "换一张封面"}
-		title={heroBusy ? "正在上传封面" : "换一张封面"}
-		class="absolute top-3 right-3 size-11 rounded-full bg-black/45 text-white hover:bg-black/65 md:top-6 md:right-6"
-		disabled={heroBusy || !meta.ready}
-		onclick={() => heroInput.click()}
-	>
-		<ImageIcon aria-hidden="true" />
-	</Button>
 </section>
 
 <!-- 倒计时 -->
 <section
-	class="relative mx-0 -mt-10 grid grid-cols-2 overflow-hidden rounded-xl bg-card shadow-[0_0_0_1px_var(--border),0_12px_30px_rgb(20_37_61/0.08)] md:mx-12 md:-mt-11 md:grid-cols-4"
+	class="relative mx-0 mt-1 grid grid-cols-2 overflow-hidden rounded-xl bg-card shadow-[0_0_0_1px_var(--border),0_12px_30px_rgb(20_37_61/0.08)] md:mx-12 md:-mt-11 md:grid-cols-4"
 	aria-label="倒计时"
 >
 	<div class="flex flex-col gap-0.5 border-b border-r p-4 md:border-b-0 md:px-6 md:py-5">
@@ -321,3 +322,105 @@
 <p class="mt-6 text-center text-[13px] text-muted-foreground">
 	{#if wishes.ready && wishes.docs.length}心愿完成 {doneWishes} / {wishes.docs.length} · {/if}<a href="/wish" class="inline-flex min-h-11 items-center gap-1 text-sea">心愿清单 <ArrowRight class="inline size-3" /></a>
 </p>
+
+<style>
+	/* 封面：照片保持原色；桌面签名压在照片左下，只在那一角加一层很轻的暗角 */
+	.cover {
+		--left: clamp(24px, 2.6vw, 30px);
+		--offset: clamp(72px, 12.5vw, 145px);
+	}
+	.cover-date {
+		position: absolute;
+		z-index: 1;
+		bottom: 12px;
+		left: 16px;
+		color: var(--stamp);
+		font: 500 0.875rem/1.25 var(--font-mono);
+		letter-spacing: 0.06em;
+		font-variant-numeric: tabular-nums;
+		text-shadow: 0 0 5px rgb(232 131 58 / 45%), 0 1px 2px rgb(58 30 13 / 42%);
+	}
+	.cover-signature {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 4px 8px;
+		padding: 8px 16px 15px;
+	}
+	.cover-name {
+		margin: 0;
+		width: fit-content;
+		max-width: 100%;
+		color: var(--foreground);
+		font: 400 clamp(1.64rem, 7.8vw, 2.15rem)/1.49 Pacifico, "Brush Script MT", cursive;
+		letter-spacing: -0.035em;
+		font-synthesis: none;
+		white-space: nowrap;
+	}
+	.cover-and {
+		display: inline-block;
+		margin: 0 0.1em;
+		font-size: 0.46em;
+		line-height: 1;
+		letter-spacing: 0;
+		vertical-align: 0.12em;
+	}
+	.cover-caption {
+		grid-column: 1 / -1;
+		grid-row: 2;
+		margin: 0;
+		color: var(--muted-foreground);
+		font-size: 0.82rem;
+		line-height: 1.55;
+		letter-spacing: 0.04em;
+	}
+	.cover-signature > :global(.cover-write) {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	@media (min-width: 48rem) {
+		.cover-photo::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			background: radial-gradient(ellipse 52% 70% at 0% 100%, rgb(18 22 28 / 58%), rgb(18 22 28 / 28%) 55%, transparent 100%);
+		}
+		.cover-date {
+			left: var(--left);
+			bottom: var(--offset);
+			font-size: clamp(0.95rem, 1.3vw, 1.05rem);
+		}
+		.cover-signature {
+			position: absolute;
+			z-index: 1;
+			top: calc(100% - var(--offset) + 2px);
+			left: var(--left);
+			display: block;
+			width: max-content;
+			max-width: 44%;
+			padding: 0;
+		}
+		.cover-name {
+			color: #fff;
+			font-size: clamp(43px, 4vw, 51px);
+			line-height: 1.2;
+			text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+		}
+		.cover-caption {
+			margin-top: 3px;
+			color: rgb(255 255 255 / 92%);
+			font-size: 14px;
+			letter-spacing: 0.045em;
+			text-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+		}
+	}
+	@media (min-width: 48rem) and (max-width: 63.99rem) {
+		.cover {
+			--offset: clamp(135px, 15.2vw, 145px);
+		}
+		.cover-caption {
+			font-size: 13px;
+		}
+	}
+</style>
