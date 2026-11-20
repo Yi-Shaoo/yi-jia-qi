@@ -146,3 +146,30 @@ test("两扇窗：明信片长文字恰好露 4 行不露半行，每日一问�
 		await ticket.blur();
 	}
 });
+
+test("店招与按钮全站统一草莓粉：首页和其他页面的写日记按钮、导航图标、遮阳棚颜色一致", async ({ page, app }) => {
+	await app.docs("meta");
+	await page.setViewportSize({ width: 1280, height: 900 });
+	const look = async () => {
+		const write = page.locator('header a[href="/diary?write=today"]');
+		await expect(write).toBeVisible();
+		await page.locator("header").getByRole("button", { name: "我们的", exact: true }).click();
+		const icon = page.locator("header").getByRole("link", { name: /约会日记/ }).locator("span").first();
+		await expect(icon).toBeVisible();
+		const result = {
+			button: await write.evaluate((el) => getComputedStyle(el).backgroundColor),
+			icon: await icon.evaluate((el) => getComputedStyle(el).color),
+			awning: await page.locator("header").evaluate((el) => getComputedStyle(el, "::after").backgroundImage),
+		};
+		await page.keyboard.press("Escape");
+		return result;
+	};
+	await page.goto("/");
+	const home = await look();
+	expect(home.button).toBe("rgb(180, 65, 106)");
+	expect(home.awning).toContain("repeating-linear-gradient");
+	for (const path of ["/memories", "/play", "/wish"]) {
+		await page.goto(path);
+		expect(await look()).toEqual(home);
+	}
+});

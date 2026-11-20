@@ -21,13 +21,13 @@
 
 <nav
 	aria-label="主导航"
-	class="tab-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+	class="tab-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 pb-[env(safe-area-inset-bottom)] md:hidden"
 >
 	<a
 		href={HOME_LINK.href}
 		class={cn(
 			"flex h-16 flex-col items-center justify-center gap-0.5 text-[11px]",
-			active === "home" ? "font-semibold text-sea" : "text-muted-foreground",
+			active === "home" ? "font-semibold text-primary" : "text-muted-foreground",
 		)}
 		aria-current={active === "home" ? "page" : undefined}
 	>
@@ -42,7 +42,7 @@
 			aria-expanded={open && group?.key === g.key}
 			class={cn(
 				"flex h-16 flex-col items-center justify-center gap-0.5 text-[11px]",
-				active === g.key ? "font-semibold text-sea" : "text-muted-foreground",
+				active === g.key ? "font-semibold text-primary" : "text-muted-foreground",
 			)}
 		>
 			<span class={cn("grid h-7 w-12 place-items-center rounded-full", active === g.key && "bg-secondary")}><g.icon aria-hidden="true" class="size-5" /></span>
@@ -69,7 +69,7 @@
 								route.path === l.href ? "bg-secondary" : "hover:bg-muted",
 							)}
 						>
-							<span class="flex size-10 items-center justify-center rounded-xl bg-muted text-sea"><l.icon class="size-5" /></span>
+							<span class="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary"><l.icon class="size-5" /></span>
 							<span class="flex flex-1 flex-col">
 								<span class="font-semibold">{l.label}</span>
 								{#if l.desc}<span class="text-[13px] text-muted-foreground">{l.desc}</span>{/if}

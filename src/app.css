@@ -10,6 +10,11 @@
  */
 :root {
 	--radius: 1rem;
+	/* 店招与按钮：全站统一草莓粉（与首页糖果铺一致） */
+	--candy-stripe: #ffb3c9;
+	--shop: #fffdfb;
+	--candy-logo: #d4557f;
+	--candy-amp: #e9a33b;
 	--notice-bottom: 24px;
 
 	--background: #faf6ef;
@@ -18,10 +23,10 @@
 	--card-foreground: #14253d;
 	--popover: #ffffff;
 	--popover-foreground: #14253d;
-	--primary: #1f5f86;
+	--primary: #b4416a;
 	--primary-foreground: #ffffff;
-	--secondary: #e3eef5;
-	--secondary-foreground: #173f5a;
+	--secondary: #ffe3ec;
+	--secondary-foreground: #8e2f52;
 	--muted: #f2ece1;
 	--muted-foreground: #5b6779;
 	--accent: #fde8e2;
@@ -29,13 +34,13 @@
 	--destructive: #c4493a;
 	--border: #e9e1d3;
 	--input: #e2d8c6;
-	--ring: #1f5f86;
+	--ring: #b4416a;
 
-	/* 方案 B 的额外颜色 */
+	/* 方案 B 的额外颜色；--sea 是全站链接/选中/按钮的强调色，已统一为草莓粉 */
 	--coral: #af3c31;
 	--coral-soft: #fde8e2;
-	--sea: #1f5f86;
-	--sea-soft: #e3eef5;
+	--sea: #b4416a;
+	--sea-soft: #ffe9f0;
 	--sun: #e8833a;
 	--sand: #f6ead2;
 	--sand-ink: #5e4310;
@@ -55,25 +60,29 @@
 
 	--sidebar: #faf6ef;
 	--sidebar-foreground: #14253d;
-	--sidebar-primary: #1f5f86;
+	--sidebar-primary: #b4416a;
 	--sidebar-primary-foreground: #ffffff;
 	--sidebar-accent: #f2ece1;
 	--sidebar-accent-foreground: #14253d;
 	--sidebar-border: #e9e1d3;
-	--sidebar-ring: #1f5f86;
+	--sidebar-ring: #b4416a;
 }
 
 .dark {
+	--candy-stripe: #8f4f67;
+	--shop: #241e26;
+	--candy-logo: #ff9fbb;
+	--candy-amp: #f2bf6a;
 	--background: #0c1320;
 	--foreground: #e8eef6;
 	--card: #141e2f;
 	--card-foreground: #e8eef6;
 	--popover: #141e2f;
 	--popover-foreground: #e8eef6;
-	--primary: #86bdd8;
-	--primary-foreground: #0c1320;
-	--secondary: #17303f;
-	--secondary-foreground: #cfe6f3;
+	--primary: #ff9fbb;
+	--primary-foreground: #3a1424;
+	--secondary: #45293a;
+	--secondary-foreground: #ffc6d6;
 	--muted: #1a2638;
 	--muted-foreground: #97a5b9;
 	--accent: #3a2030;
@@ -81,12 +90,12 @@
 	--destructive: #ff8a7a;
 	--border: #24324a;
 	--input: #2b3b55;
-	--ring: #86bdd8;
+	--ring: #ff9fbb;
 
 	--coral: #ff8f7d;
 	--coral-soft: #3a2030;
-	--sea: #86bdd8;
-	--sea-soft: #17303f;
+	--sea: #ffb0c8;
+	--sea-soft: #45293a;
 	--sun: #ffa25c;
 	--sand: #2e2717;
 	--sand-ink: #f3dca8;
@@ -236,6 +245,46 @@
 	.dark .polaroid {
 		@apply bg-[#f4efe6];
 	}
+}
+
+/* 全站店招：Pacifico 手写店名 + 页头下沿的粉白遮阳棚；手机底栏同色 */
+.site-logo {
+	font: 400 22px/1 Pacifico, "Brush Script MT", cursive;
+	letter-spacing: 0;
+	color: var(--candy-logo);
+}
+.site-logo span {
+	color: var(--candy-amp);
+}
+@media (min-width: 48rem) {
+	.site-logo {
+		font-size: 26px;
+	}
+}
+.site-header {
+	background: var(--shop);
+	box-shadow: 0 1px 0 color-mix(in srgb, var(--candy-stripe) 30%, transparent);
+}
+.site-header::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 100%;
+	height: 26px;
+	background: repeating-linear-gradient(90deg, var(--candy-stripe) 0 28px, var(--shop) 28px 56px);
+	mask:
+		linear-gradient(#000 0 0) 0 0 / 100% 12px no-repeat,
+		radial-gradient(circle 14px at 14px 12px, #000 98%, transparent) 0 0 / 28px 26px repeat-x;
+	filter: drop-shadow(0 3px 2px rgb(212 85 127 / 12%));
+	pointer-events: none;
+}
+#main-content {
+	padding-top: 30px;
+}
+.tab-bar {
+	background: var(--shop);
+	border-top: 2px solid color-mix(in srgb, var(--candy-stripe) 45%, transparent);
 }
 
 [data-slot="input"] { min-height: 44px; }

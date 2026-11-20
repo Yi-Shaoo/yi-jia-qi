@@ -224,7 +224,7 @@
 			<div class="flex flex-wrap gap-1.5">
 				{#each Object.entries(TAGS) as [k, v] (k)}
 					<button type="button" aria-pressed={(cur.data.tag ?? "") === k} onclick={() => setTag(k as PhotoTag)}
-						class={cn("h-11 rounded-full border px-3 text-sm md:h-10", (cur.data.tag ?? "") === k ? "border-foreground bg-foreground text-background" : "hover:bg-muted")}>{v}</button>
+						class={cn("h-11 rounded-full border px-3 text-sm md:h-10", (cur.data.tag ?? "") === k ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>{v}</button>
 				{/each}
 			</div>
 		</fieldset>

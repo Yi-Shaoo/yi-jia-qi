@@ -24,7 +24,7 @@
 	const diaryLabels = { "今日日记": "今日日记", "继续写草稿": "继续写日记草稿", "改我的这一边": "改今天的日记", "写下今天": "写今天的日记" } as const;
 </script>
 
-<header class="sticky top-0 z-40 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+<header class="site-header sticky top-0 z-40">
 	<div class="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 md:h-[72px] md:gap-8 md:px-6">
 		<a href="/" class="site-logo font-display text-[19px] font-extrabold tracking-[-0.03em] md:text-[22px]">
 			Yi <span class="text-coral">&amp;</span> Jia Qi
@@ -66,7 +66,7 @@
 												route.path === l.href && "bg-muted",
 											)}
 										>
-											<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-sea"><l.icon aria-hidden="true" class="size-4" /></span>
+											<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary"><l.icon aria-hidden="true" class="size-4" /></span>
 											<span><span class="block font-semibold">{l.label}</span>{#if l.desc}<span class="block text-[13px] leading-snug text-muted-foreground">{l.desc}</span>{/if}</span>
 										</NavigationMenu.Link>
 									</li>
