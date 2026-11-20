@@ -2,8 +2,9 @@
 	import { Button } from "$lib/components/ui/button";
 	import Lightbox from "$lib/components/Lightbox.svelte";
 	import { fileUrl } from "$lib/api";
-	import { WHO, type DiarySide, type Who } from "$lib/types";
-	import { cn } from "$lib/utils";
+	import { WHO, otherOf, type DiarySide, type Who } from "$lib/types";
+	import { fmtShort } from "$lib/dates";
+	import Heart from "@lucide/svelte/icons/heart";
 	import { sideHasContent } from "./entry";
 	import MapPin from "@lucide/svelte/icons/map-pin";
 	import PenLine from "@lucide/svelte/icons/pen-line";
@@ -18,28 +19,36 @@
 		onwrite,
 	}: { who: Who; side: DiarySide | undefined; date: string; mine: boolean; hasDraft: boolean; disabled: boolean; onwrite?: () => void } = $props();
 
+	const signature = $props.id();
 	const has = $derived(sideHasContent(side));
 	let open = $state(false);
 </script>
 
-<section class="flex min-w-0 flex-col items-start gap-3 py-4 wrap-anywhere last:pb-0 md:pb-0 md:first:pr-5 md:last:pl-5">
-	<div class="flex flex-wrap items-baseline gap-x-3">
-		<h3 class={cn("text-lg font-semibold", who === "yi" ? "text-yi" : "text-jq")}>From {WHO[who]}</h3>
-		{#if side?.pl}<span class="inline-flex items-baseline gap-1 text-xs text-muted-foreground"><MapPin aria-hidden="true" class="size-3 shrink-0 self-center" />{side.pl}</span>{/if}
+<section class="diary-postcard" data-who={who} aria-labelledby={signature}>
+	<div class="post-address">
+		<div class="post-from">
+			<h3 id={signature}>From {WHO[who]}</h3>
+			<small>To {WHO[otherOf(who)]}</small>
+			{#if side?.pl}<span class="post-place"><MapPin aria-hidden="true" /><span>{side.pl}</span></span>{/if}
+		</div>
+		<div class="post-frank" aria-hidden="true">
+			<span class="post-seal"><b>{who === "yi" ? "IRVINE" : "WESTWOOD"}</b><span>{fmtShort(date)}</span></span>
+			<span class="post-stamp"><Heart /></span>
+		</div>
 	</div>
 
 	{#if has && side}
 		{#if side.photo}
-			<button type="button" onclick={() => (open = true)} class="w-full overflow-hidden rounded-lg" aria-label={`${WHO[who]} 这天的照片`}>
-				<img src={fileUrl(side.photo)} alt="" loading="lazy" class="max-h-64 w-full object-cover" />
+			<button type="button" onclick={() => (open = true)} class="post-photo" aria-label={`${WHO[who]} 这天的照片`}>
+				<img src={fileUrl(side.photo)} alt="" loading="lazy" class="max-h-64 w-full object-scale-down" />
 			</button>
 			<Lightbox bind:open src={fileUrl(side.photo)} alt={`${WHO[who]} · ${date}`} title={`${WHO[who]} · ${date.replaceAll("-", ".")}`} />
 		{/if}
-		{#if side.t}<p class="text-[15px] leading-7 whitespace-pre-line">{side.t}</p>{/if}
+		{#if side.t}<p class="post-text">{side.t}</p>{/if}
 		{#if side.fav}
-			<div class="border-l-2 border-coral/40 pl-3">
-				<span class="text-xs font-semibold opacity-70">最喜欢的瞬间</span>
-				<div class="text-[15px]">{side.fav}</div>
+			<div class="post-moment">
+				<span><Heart aria-hidden="true" />最喜欢的瞬间</span>
+				<p>{side.fav}</p>
 			</div>
 		{/if}
 	{:else if !mine || (!onwrite && !hasDraft)}
@@ -47,7 +56,7 @@
 	{/if}
 
 	{#if mine && onwrite}
-		<Button variant={has ? "ghost" : "default"} size="sm" class={cn("mt-auto self-start rounded-full", has && "-ml-3")} {disabled} onclick={onwrite}>
+		<Button variant="outline" size="sm" class="post-write" {disabled} onclick={onwrite}>
 			<PenLine />{hasDraft ? "继续写草稿" : has ? "改我的这一边" : "写我的这一边"}
 		</Button>
 	{:else if mine && hasDraft}

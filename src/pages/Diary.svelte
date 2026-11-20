@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
-	import PageHeader from "$lib/components/PageHeader.svelte";
+	import "$lib/components/diary/stationery.css";
 	import CollectionNotice from "$lib/components/CollectionNotice.svelte";
 	import Postcard from "$lib/components/diary/Postcard.svelte";
 	import Pudding from "$lib/components/diary/Pudding.svelte";
@@ -17,6 +17,8 @@
 	import { localDay } from "$lib/local-day";
 	import MapPin from "@lucide/svelte/icons/map-pin";
 	import PenLine from "@lucide/svelte/icons/pen-line";
+	import Heart from "@lucide/svelte/icons/heart";
+	import Star from "@lucide/svelte/icons/star";
 
 	const diary = useCollection("diary");
 	const diaryAction = $derived(todayDiaryAction(diary, session.who, $localDay));
@@ -55,22 +57,36 @@
 	});
 </script>
 
-<div class="flex flex-wrap items-end justify-between gap-4">
-	<PageHeader title="约会日记">
-		{#snippet actions()}
-			{#if primaryTitle}
-				<span class="self-center text-sm break-words text-muted-foreground">今天 · {primaryTitle}</span>
-			{/if}
-			<Button class="rounded-full" disabled={!diary.ready} onclick={() => start({ today: $localDay })}><PenLine />{diaryAction.label}</Button>
-		{/snippet}
-	</PageHeader>
-	<div class="hidden pb-6 md:block"><Pudding bind:this={pudding} /></div>
-</div>
+<section class="diary-shop" aria-labelledby="diary-title">
+	<header class="diary-counter">
+		<div class="diary-awning" aria-hidden="true"></div>
+		<div class="diary-counter-body">
+			<div class="diary-sprinkles" aria-hidden="true">
+				<i class="macaron berry"></i><i class="macaron mint"></i><i class="macaron sky"></i>
+				<Star class="sugar-star" />
+				<svg class="sugar-berry" viewBox="0 0 24 24" fill="none">
+					<path d="M12 7c4-3 9 0 8 5-1 6-6 10-8 10S5 18 4 12c-1-5 4-8 8-5Z" fill="var(--pink)" />
+					<path d="M12 8c-1-3 1-5 3-6m-3 6c2-3 4-4 6-2" stroke="var(--mint-ink)" stroke-width="1.6" stroke-linecap="round" />
+					<path d="m8 12 .5 1m5-2 .5 1m-3 4 .5 1m4-3 .5 1" stroke="var(--cream)" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			</div>
+			<div class="diary-counter-copy">
+				<span class="shop-sign"><Heart aria-hidden="true" />今日特供 · 我们的约会</span>
+				<h1 id="diary-title">约会日记</h1>
+				<p class="diary-intro">同一天，两扇窗。今天的心情，一人写一边。</p>
+				<div class="diary-counter-actions">
+					<Button class="diary-write" disabled={!diary.ready} onclick={() => start({ today: $localDay })}><PenLine aria-hidden="true" />{diaryAction.label}</Button>
+					{#if primaryTitle}<span class="text-sm wrap-anywhere">今天 · {primaryTitle}</span>{/if}
+				</div>
+			</div>
+			<Pudding bind:this={pudding} />
+		</div>
+	</header>
 
 {#if drafts.length}
 	<section aria-label="本机文字草稿" class="mb-5 grid gap-2">
 		{#each drafts as { key, draft } (key)}
-			<div class="flex items-center justify-between gap-3 rounded-2xl bg-sand px-4 py-3 text-sm text-sand-ink">
+			<div class="diary-draft flex items-center justify-between gap-3 px-4 py-3 text-sm">
 				<span class="min-w-0 break-words">{draft.fields.date || "未选日期"} · 文字草稿{draft.fields.title ? `《${draft.fields.title}》` : ""}</span>
 				<Button size="sm" disabled={!diary.ready} onclick={() => start({ draftKey: key })}>继续写</Button>
 			</div>
@@ -80,25 +96,26 @@
 
 <CollectionNotice status={diary.status} retry={() => diary.load()} label="日记" />
 {#if diary.ready && !diary.docs.length}
-	<p class="surface-card p-6 text-muted-foreground">还没有日记。</p>
+	<p class="diary-empty">还没有日记。</p>
 {:else if diary.ready && !list.length}
 	<p role="status" class="text-sm text-muted-foreground">已载入的日记缺少有效日期，无法列出。</p>
 {/if}
 
-<div class="flex flex-col gap-6">
-	{#each list as d (d.id)}
-		<article class="surface-card min-w-0 p-5 md:p-6">
+<div class="diary-entries">
+	{#each list as d, i (d.id)}
+		<article class="diary-entry" aria-labelledby={`diary-title-${d.id}`}>
+			<span class="menu-tab" aria-hidden="true">MENU <span>·</span> {String(list.length - i).padStart(2, "0")}</span>
 			<div class="flex flex-wrap items-center gap-2">
-				<time datetime={d.data.date} class="font-mono text-xs text-muted-foreground">{fmtDots(d.data.date)}</time>
-				<Badge variant={d.data.kind === "apart" ? "secondary" : "default"} class={d.data.kind === "together" ? "bg-coral text-primary-foreground" : ""}>
+				<time datetime={d.data.date} class="diary-date">{fmtDots(d.data.date)}</time>
+				<Badge variant="secondary" class={d.data.kind === "apart" ? "diary-kind" : "diary-kind together"}>
 					{d.data.kind === "apart" ? "各自的一天" : "见面的一天"}
 				</Badge>
 			</div>
-			<h2 class="mt-2 text-2xl font-bold break-words">{diaryTitle(d.data)}</h2>
+			<h2 class="entry-title" id={`diary-title-${d.id}`}>{diaryTitle(d.data)}</h2>
 			{#if d.data.place}
-				<span class="inline-flex items-baseline gap-1 text-sm wrap-anywhere text-muted-foreground"><MapPin aria-hidden="true" class="size-4 shrink-0 self-center" />共享地点：{d.data.place}</span>
+				<span class="entry-place"><MapPin aria-hidden="true" /><span>共享地点：{d.data.place}</span></span>
 			{/if}
-			<div class="mt-4 grid divide-y border-t md:grid-cols-2 md:divide-x md:divide-y-0">
+			<div class="diary-postcards">
 				{#each ["yi", "jq"] as const as w (w)}
 					<Postcard who={w} side={d.data[w]} date={d.data.date} mine={w === session.who}
 						hasDraft={cardDrafts.has(d.id)} disabled={!diary.ready} onwrite={d.id === diaryAction.itemId ? undefined : () => start({ id: d.id })} />
@@ -107,6 +124,7 @@
 		</article>
 	{/each}
 </div>
+</section>
 
 {#if editor}
 	<DiaryEditor target={editor} onclose={() => (editor = null)} onsaved={() => pudding?.cheer()} />
