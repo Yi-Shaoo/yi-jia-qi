@@ -14,9 +14,10 @@
 	import { deletePhoto } from "$lib/upload";
 	import { uploadBatch, type SelectedPhoto } from "$lib/photo-batch";
 	import { uploadStamp } from "$lib/dates";
-	import { thumbnail } from "$lib/thumbnail";
+	import Polaroid from "$lib/components/Polaroid.svelte";
+	import EmptyState from "$lib/components/EmptyState.svelte";
 	import type { Doc, Photo, PhotoTag } from "$lib/types";
-	import { cn } from "$lib/utils";
+
 	import Upload from "@lucide/svelte/icons/upload";
 
 	const photos = useCollection("photos");
@@ -32,7 +33,7 @@
 		filter === "none" ? "还没有未分类的照片" : `${FILTERS[filter]}分类还没有照片`);
 
 	type AlbumUpload = SelectedPhoto & { tag: PhotoTag; created: number };
-	let input: HTMLInputElement;
+	let input = $state<HTMLInputElement | null>(null);
 	let failed = $state<AlbumUpload[]>([]);
 	const retryable = $derived(failed.filter((item) => item.error?.retryable));
 	let uploading = $state(false);
@@ -150,18 +151,28 @@
 			saving = false;
 		}
 	}
+
+	const masonryStep = 4;
+	const masonryGap = 16;
+	function sizeTile(tile: HTMLElement) {
+		const fit = () => {
+			const rows = Math.ceil((tile.getBoundingClientRect().height + masonryGap) / masonryStep);
+			tile.style.gridRowEnd = `span ${rows}`;
+		};
+		const observer = new ResizeObserver(fit);
+		observer.observe(tile);
+		fit();
+		return { destroy: () => observer.disconnect() };
+	}
 </script>
 
 {#snippet uploadAction()}
-	<div class="flex flex-col items-start gap-1.5">
-		<Button class="rounded-full" disabled={uploading} aria-describedby="album-formats" onclick={() => input.click()}>
-			<Upload />{tag ? `上传到${TAGS[tag]}` : "上传照片"}
-		</Button>
-		<span id="album-formats" class="text-xs text-muted-foreground">JPG、PNG 等浏览器可读取的图片</span>
-	</div>
+	<Button disabled={uploading} onclick={() => input?.click()}>
+		<Upload />{tag ? `上传到${TAGS[tag]}` : "上传照片"}
+	</Button>
 {/snippet}
 
-<input bind:this={input} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
+<Input bind:ref={input} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
 <PageHeader title="情侣相册" stackActions actions={empty ? undefined : uploadAction} />
 
 <div id="album-filters" class="mb-5 flex flex-col gap-3">
@@ -184,25 +195,19 @@
 
 <CollectionNotice status={photos.status} retry={() => photos.load()} />
 {#if empty}
-	<div class="surface-card flex flex-col items-start gap-4 p-6">
-		<p>{emptyText}</p>
-		{#if !photos.docs.length && filter === "all"}<a href="/memories" class="inline-flex min-h-11 items-center text-sm text-sea underline underline-offset-4">去回忆时间线看照片</a>{/if}
-		<div class="flex flex-wrap items-start gap-2">
-			{#if filter !== "all"}<Button variant="outline" onclick={() => (filter = "all")}>查看全部</Button>{/if}
-			{@render uploadAction()}
-		</div>
-	</div>
+	<EmptyState message={emptyText}>
+		{@render uploadAction()}
+		{#if filter !== "all"}<Button variant="outline" onclick={() => (filter = "all")}>查看全部</Button>{/if}
+		{#if !photos.docs.length && filter === "all"}<Button href="/memories" variant="link">去回忆时间线看照片</Button>{/if}
+	</EmptyState>
 {:else if list.length}
-	<div class="grid grid-cols-2 items-start gap-4 md:grid-cols-3 lg:grid-cols-4">
+	<div style:grid-auto-rows={`${masonryStep}px`} style:column-gap={`${masonryGap}px`} class="grid grid-cols-2 items-start md:grid-cols-3 lg:grid-cols-4">
 		{#each list as p, i (p.id)}
 			{@const stamp = p.data.st?.trim() || uploadStamp(p.data.c)}
-			<button type="button" id={`photo-${p.id}`} aria-label={`查看${photoName(p.data, i)}`} onclick={() => view(p)} class="polaroid block w-full min-w-0 p-2 pb-3 text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-				<span class="relative block">
-					<img use:thumbnail src={fileUrl(p.data.asset)} alt={p.data.cap || photoName(p.data, i)} loading="lazy" class="block aspect-[4/3] w-full bg-[#eee9df] object-scale-down" />
-					{#if stamp}<span class="film-stamp absolute right-1 bottom-1 text-[11px] whitespace-nowrap sm:right-2 sm:bottom-2 sm:text-[13px]">{stamp}</span>{/if}
-				</span>
-				<span class="mt-2 block min-h-5 truncate text-[13px] text-[#14253d]">{p.data.cap || ""}</span>
-			</button>
+			<div class="min-w-0" use:sizeTile>
+				<Polaroid compact id={`photo-${p.id}`} src={fileUrl(p.data.asset)} {stamp} title={p.data.cap || ""}
+					alt={p.data.cap || photoName(p.data, i)} imgClass="h-auto" aria-label={`查看${photoName(p.data, i)}`} onclick={() => view(p)} />
+			</div>
 		{/each}
 	</div>
 {/if}
@@ -223,8 +228,7 @@
 			<legend class="mb-2 text-sm font-medium">分类</legend>
 			<div class="flex flex-wrap gap-1.5">
 				{#each Object.entries(TAGS) as [k, v] (k)}
-					<button type="button" aria-pressed={(cur.data.tag ?? "") === k} onclick={() => setTag(k as PhotoTag)}
-						class={cn("h-11 rounded-full border px-3 text-sm md:h-10", (cur.data.tag ?? "") === k ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>{v}</button>
+					<Button size="sm" variant={(cur.data.tag ?? "") === k ? "default" : "outline"} aria-pressed={(cur.data.tag ?? "") === k} onclick={() => setTag(k as PhotoTag)}>{v}</Button>
 				{/each}
 			</div>
 		</fieldset>

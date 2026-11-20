@@ -3,11 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * 方案 B · 海岸 Coastal
- * 沙色底 + 太平洋蓝（主色）+ 日落珊瑚（强调）+ 胶片橘（日期戳）
- * shadcn-svelte 组件读的是下面这些变量，改颜色只改这里。
- */
 :root {
 	--radius: 1rem;
 	/* 店招与按钮：全站统一草莓粉（与首页糖果铺一致） */
@@ -17,30 +12,29 @@
 	--candy-amp: #e9a33b;
 	--notice-bottom: 24px;
 
-	--background: #faf6ef;
-	--foreground: #14253d;
-	--card: #ffffff;
-	--card-foreground: #14253d;
-	--popover: #ffffff;
-	--popover-foreground: #14253d;
+	--background: #fff7f5;
+	--foreground: #4a2a33;
+	--card: #fffdfb;
+	--card-foreground: var(--foreground);
+	--popover: var(--card);
+	--popover-foreground: var(--foreground);
 	--primary: #b4416a;
 	--primary-foreground: #ffffff;
 	--secondary: #ffe3ec;
 	--secondary-foreground: #8e2f52;
-	--muted: #f2ece1;
-	--muted-foreground: #5b6779;
-	--accent: #fde8e2;
-	--accent-foreground: #7d2a1f;
+	--muted: #fdeeea;
+	--muted-foreground: #795963;
+	--accent: var(--secondary);
+	--accent-foreground: var(--secondary-foreground);
 	--destructive: #c4493a;
-	--border: #e9e1d3;
-	--input: #e2d8c6;
-	--ring: #b4416a;
+	--border: #f0d4d6;
+	--input: #d5adb8;
+	--ring: var(--primary);
 
-	/* 方案 B 的额外颜色；--sea 是全站链接/选中/按钮的强调色，已统一为草莓粉 */
-	--coral: #af3c31;
-	--coral-soft: #fde8e2;
-	--sea: #b4416a;
-	--sea-soft: #ffe9f0;
+	--coral: #a8365f;
+	--coral-soft: var(--secondary);
+	--sea: var(--primary);
+	--sea-soft: var(--secondary);
 	--sun: #e8833a;
 	--sand: #f6ead2;
 	--sand-ink: #5e4310;
@@ -58,14 +52,14 @@
 	--chart-4: #3f9e78;
 	--chart-5: #8467d4;
 
-	--sidebar: #faf6ef;
-	--sidebar-foreground: #14253d;
-	--sidebar-primary: #b4416a;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #f2ece1;
-	--sidebar-accent-foreground: #14253d;
-	--sidebar-border: #e9e1d3;
-	--sidebar-ring: #b4416a;
+	--sidebar: var(--background);
+	--sidebar-foreground: var(--foreground);
+	--sidebar-primary: var(--primary);
+	--sidebar-primary-foreground: var(--primary-foreground);
+	--sidebar-accent: var(--muted);
+	--sidebar-accent-foreground: var(--foreground);
+	--sidebar-border: var(--border);
+	--sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -73,29 +67,20 @@
 	--shop: #241e26;
 	--candy-logo: #ff9fbb;
 	--candy-amp: #f2bf6a;
-	--background: #0c1320;
-	--foreground: #e8eef6;
-	--card: #141e2f;
-	--card-foreground: #e8eef6;
-	--popover: #141e2f;
-	--popover-foreground: #e8eef6;
+	--background: #1f181d;
+	--foreground: #f7e8ec;
+	--card: #2b2228;
 	--primary: #ff9fbb;
 	--primary-foreground: #3a1424;
 	--secondary: #45293a;
 	--secondary-foreground: #ffc6d6;
-	--muted: #1a2638;
-	--muted-foreground: #97a5b9;
-	--accent: #3a2030;
-	--accent-foreground: #ffc4b6;
+	--muted: #33282f;
+	--muted-foreground: #cfb3bb;
 	--destructive: #ff8a7a;
-	--border: #24324a;
-	--input: #2b3b55;
-	--ring: #ff9fbb;
+	--border: #4a3a43;
+	--input: #735968;
 
-	--coral: #ff8f7d;
-	--coral-soft: #3a2030;
-	--sea: #ffb0c8;
-	--sea-soft: #45293a;
+	--coral: #ffa9c2;
 	--sun: #ffa25c;
 	--sand: #2e2717;
 	--sand-ink: #f3dca8;
@@ -106,6 +91,41 @@
 	--yi-soft: #3a2030;
 	--jq: #86bdd8;
 	--jq-soft: #17303f;
+}
+
+.paper-card {
+	--paper: #fffdf9;
+	--paper-ink: #14243d;
+	--paper-edge: #edd9c9;
+	--paper-rule: #f4e8df;
+	--postmark: #b28473;
+	--sign: #bf4b75;
+	--trim: #ffb4c8;
+	--note: #ffdae4;
+	--note-ink: #a13960;
+}
+.paper-card[data-who="jq"] {
+	--sign: #34769f;
+	--trim: #a9e1ef;
+	--note: #d9edfc;
+	--note-ink: #2c6791;
+}
+.dark .paper-card {
+	--paper: var(--card);
+	--paper-ink: var(--card-foreground);
+	--paper-edge: var(--border);
+	--paper-rule: color-mix(in srgb, var(--border) 65%, transparent);
+	--postmark: #b89285;
+	--sign: #ffb4ca;
+	--trim: #ad637d;
+	--note: #51303f;
+	--note-ink: #ffb4ca;
+}
+.dark .paper-card[data-who="jq"] {
+	--sign: #a8d9f5;
+	--trim: #628d9f;
+	--note: #293f50;
+	--note-ink: #a8d9f5;
 }
 
 @theme inline {
@@ -201,6 +221,7 @@
 		@apply border-border outline-ring/50;
 	}
 	html {
+		scrollbar-gutter: stable;
 		-webkit-tap-highlight-color: transparent;
 	}
 	body {
@@ -230,12 +251,9 @@
 		@apply font-mono tracking-[0.06em] text-stamp;
 		display: inline-block;
 		width: fit-content;
-		border-radius: 4px;
-		background: #152739;
+		background: transparent;
+		text-shadow: 0 1px 2px rgb(0 0 0 / 85%);
 		padding: 0.12em 0.45em;
-	}
-	.surface-card {
-		@apply rounded-xl bg-card ring-1 ring-border;
 	}
 	/* 拍立得 */
 	.polaroid {
@@ -321,6 +339,12 @@ h2[id^="memory-"] { scroll-margin-top: 5.5rem; }
 		:where(main a[href]) { display: inline-block; }
 	}
 }
+
+[data-motion="none"], [data-motion="none"] *, [data-motion="none"] ::before, [data-motion="none"] ::after {
+	animation: none !important;
+	transition: none !important;
+}
+[data-motion="none"] [data-slot="button"]:active { translate: none; }
 
 @media (prefers-reduced-motion: reduce) {
 	*, *::before, *::after {

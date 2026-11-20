@@ -1,3 +1,4 @@
+export { cardSurface } from "./card.svelte";
 import Action from "./card-action.svelte";
 import Content from "./card-content.svelte";
 import Description from "./card-description.svelte";

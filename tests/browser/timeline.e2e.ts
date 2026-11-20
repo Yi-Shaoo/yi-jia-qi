@@ -44,7 +44,7 @@ test("390px 在长文底部收起后留在本条，而不是下一条记录", as
 	expect((await title.boundingBox())!.y).toBeGreaterThanOrEqual(64);
 });
 
-test("跨页日记操作标明对象，心愿不显示占位时间戳", async ({ page, app }) => {
+test("从导航进入日记可编辑当日记录，心愿不显示占位时间戳", async ({ page, app }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.clock.setFixedTime(new Date(2026, 10, 19, 12));
 	await app.put("wishes", "old", { c: 1, t: "野餐", d: false });
@@ -53,6 +53,8 @@ test("跨页日记操作标明对象，心愿不显示占位时间戳", async ({
 	await page.goto("/wish");
 	await expect(page.locator("#wish-old time")).toHaveCount(0);
 	await expect(page.locator("#wish-recent time")).toHaveText("11.18");
-	await page.getByRole("banner").getByRole("link", { name: "改今天的日记" }).click();
+	await page.getByRole("banner").getByRole("button", { name: "我们的", exact: true }).click();
+	await page.getByRole("banner").getByRole("link", { name: "约会日记", exact: true }).click();
+	await page.getByRole("button", { name: "改我的这一边", exact: true }).click();
 	await expect(page.getByRole("dialog").getByLabel("正文", { exact: true })).toHaveValue("等日落");
 });

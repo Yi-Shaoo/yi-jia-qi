@@ -36,7 +36,7 @@
 	const face = $derived(sleeping ? "sleep" : hunger < 25 || mood < 15 ? "sad" : hunger >= 60 && mood >= 50 ? "happy" : "ok");
 	let say = $state("");
 	let sayTimer = 0;
-	let petEl: HTMLElement;
+	let petEl = $state<HTMLElement | null>(null);
 
 	function speak(s: string, ms = 2600) {
 		say = s;
@@ -135,7 +135,7 @@
 		>
 			{#if say}<div role="status" class="absolute -top-9 left-1/2 -translate-x-1/2 animate-pop rounded-xl bg-card px-2.5 py-1 text-xs whitespace-nowrap shadow">{say}</div>{/if}
 			{#if sleeping}<span class="absolute -top-2 right-1 font-mono text-sm text-muted-foreground" aria-hidden="true">z<sup>z</sup></span>{/if}
-			<button bind:this={petEl} type="button" onclick={pat} aria-label="摸摸糯糯" class={cn("block w-full", hop && "animate-beat", eating && "animate-shake")}>
+			<Button bind:ref={petEl} variant="surface" onclick={pat} aria-label="摸摸糯糯" class={cn("block w-full", hop && "animate-beat", eating && "animate-shake")}>
 				<svg viewBox="0 0 100 100" aria-hidden="true" class={cn("block w-full transition-transform", walking && "animate-bounce")} style:transform={`scaleX(${dir})`}>
 					<ellipse cx="50" cy="94" rx="26" ry="4" fill="#000" opacity=".1" />
 					<path d="M50 30 C50 22 50 18 50 14" stroke="#7fbf86" stroke-width="3" stroke-linecap="round" fill="none" />
@@ -157,7 +157,7 @@
 					{/if}
 					<ellipse cx="38" cy="89" rx="7" ry="4" fill="#ffd6c2" /><ellipse cx="62" cy="89" rx="7" ry="4" fill="#ffd6c2" />
 				</svg>
-			</button>
+			</Button>
 		</div>
 	</div>
 

@@ -170,6 +170,16 @@ describe("日记发布与整篇删除", () => {
 		}
 	});
 
+	test("新日记不写共享地点，旧草稿中的共享地点不恢复或转为个人地点", () => {
+		const base = diaryFields(undefined, "yi", day);
+		const { entry } = publication(base, { ...base, kind: "together", title: "读书", text: "一起读书" }, "yi");
+		expect(entry).not.toHaveProperty("place");
+		expect(entry.yi).not.toHaveProperty("pl");
+		const record = doc("meet", 1, { ...entry, place: "公园" });
+		storage.setItem(entryDraftKey(record.id, "jq"), JSON.stringify({ sharedPlace: "书店", text: "我的记录", at: 10, version: 2 }));
+		expect(entryDraft(record, "jq")?.fields).toEqual({ text: "我的记录" });
+	});
+
 	test("删除说明使用已保存的篇名、日期、两人和真实照片数；零张不报数", () => {
 		const d = { ...second.data, yi: { ...side, photo: "a" }, jq: { ...side, photo: "b" } };
 		expect(deletionDescription(d)).toContain(`${day}《第二站》`);

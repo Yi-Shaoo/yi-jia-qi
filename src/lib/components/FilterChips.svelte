@@ -1,4 +1,6 @@
 <script lang="ts" generics="K extends string">
+	import { RadioChoice } from "$lib/components/ui/radio-choice";
+
 	let {
 		options,
 		value = $bindable(),
@@ -13,10 +15,7 @@
 	<legend class="sr-only">{label}</legend>
 	<div class={['flex gap-2 py-1 md:mx-0 md:flex-wrap md:px-0', wrap ? 'flex-wrap' : '-mx-4 overflow-x-auto px-4']}>
 		{#each keys as k (k)}
-			<label class="group relative shrink-0 cursor-pointer">
-				<input type="radio" {name} value={k} bind:group={value} class="peer sr-only" />
-				<span class="inline-flex h-11 items-center rounded-full md:h-9 border border-border px-4 text-sm font-medium transition-colors peer-not-checked:group-hover:bg-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">{options[k]}</span>
-			</label>
+			<RadioChoice {name} value={k} label={options[k]} bind:selected={value} />
 		{/each}
 	</div>
 </fieldset>

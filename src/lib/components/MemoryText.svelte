@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Button } from "$lib/components/ui/button";
 	import { tick } from "svelte";
 
 	let { text }: { text: string } = $props();
@@ -29,5 +30,5 @@
 
 <p bind:this={paragraph} {id} class:line-clamp-6={!expanded} class="mt-1 max-w-prose text-[15px] leading-relaxed wrap-anywhere whitespace-pre-line text-muted-foreground">{text}</p>
 {#if long}
-	<button type="button" aria-controls={id} aria-expanded={expanded} onclick={toggle} class="inline-flex min-h-11 items-center rounded-sm text-sm font-medium text-sea underline underline-offset-4">{expanded ? "收起正文" : "展开全文"}</button>
+	<Button variant="link" aria-controls={id} aria-expanded={expanded} onclick={toggle} class="px-0 underline">{expanded ? "收起正文" : "展开全文"}</Button>
 {/if}

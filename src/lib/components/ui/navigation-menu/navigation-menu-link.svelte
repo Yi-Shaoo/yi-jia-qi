@@ -12,6 +12,6 @@
 <NavigationMenuPrimitive.Link
 	bind:ref
 	data-slot="navigation-menu-link"
-	class={cn("data-[active=true]:focus:bg-muted data-[active=true]:hover:bg-muted data-[active=true]:bg-muted/50 focus-visible:ring-ring/50 hover:bg-muted focus:bg-muted flex items-center gap-1.5 rounded-2xl p-3 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4 in-data-[slot=navigation-menu-content]:rounded-xl", className)}
+	class={cn("flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted aria-[current=page]:bg-secondary aria-[current=page]:text-secondary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring in-data-[slot=navigation-menu-content]:rounded-xl in-data-[slot=navigation-menu-content]:text-foreground", className)}
 	{...restProps}
 />

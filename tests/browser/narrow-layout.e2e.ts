@@ -18,13 +18,15 @@ test("320px：日期不折行，回忆编辑不掉到标题底部", async ({ pag
 	expect(pencil.y).toBeLessThan(heading.y + heading.height);
 });
 
-test("390px 两个地区目录的添加动作都在说明下方", async ({ page, app }) => {
+test("390px 添加地点位于标题下方，添加餐厅仍在说明下方", async ({ page, app }) => {
 	await app.docs("custom");
 	await page.setViewportSize({ width: 390, height: 800 });
 	for (const [route, label] of [["/dates", "添加地点"], ["/food", "添加餐厅"]]) {
 		await page.goto(route);
 		const heading = page.getByRole("heading", { level: 1 });
-		const text = (await heading.locator("../p").boundingBox())!, add = (await page.getByRole("button", { name: label }).boundingBox())!;
+		const lede = heading.locator("../p");
+		if (route === "/dates") await expect(lede).toHaveCount(0);
+		const text = (await (route === "/dates" ? heading : lede).boundingBox())!, add = (await page.getByRole("button", { name: label }).boundingBox())!;
 		expect(add.x).toBe(text.x);
 		expect(add.y).toBeGreaterThanOrEqual(text.y + text.height);
 	}

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button";
+	import { Card } from "$lib/components/ui/card";
+	import PageHeader from "$lib/components/PageHeader.svelte";
 </script>
 
-<div class="flex flex-col items-start gap-4 py-24">
-	<span class="eyebrow">404</span>
-	<h1 class="text-4xl font-bold">这一页走丢了</h1>
-	<p class="text-muted-foreground">可能是链接写错了。</p>
-	<Button href="/" class="rounded-full">回首页</Button>
-</div>
+<Card variant="surface" class="mx-auto mt-8 max-w-lg p-5 md:mt-16 md:p-6">
+	<span class="font-mono text-sm text-muted-foreground">404</span>
+	<PageHeader title="这一页走丢了" lede="可能是链接写错了。" />
+	<Button href="/">回首页</Button>
+</Card>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Button } from "$lib/components/ui/button";
+	import { cn } from "$lib/utils";
 	import { onDestroy } from "svelte";
 	import { heartBurst, pick } from "$lib/fx";
 
@@ -17,7 +19,7 @@
 	];
 	let say = $state("戳戳我");
 	let hop = $state(false);
-	let btn: HTMLButtonElement;
+	let btn = $state<HTMLButtonElement | null>(null);
 	let t = 0;
 	onDestroy(() => clearTimeout(t));
 
@@ -42,7 +44,7 @@
 
 <div class="diary-pudding">
 	<div role="status" class="pudding-bubble">{say}</div>
-	<button bind:this={btn} type="button" onclick={poke} aria-label="戳一下布丁" class={["pudding-button", hop && "animate-pop"]}>
+	<Button bind:ref={btn} variant="surface" onclick={poke} aria-label="戳一下布丁" class={cn("pudding-button", hop && "animate-pop")}>
 		<svg viewBox="0 0 120 128" class="block w-full" aria-hidden="true">
 			<ellipse cx="60" cy="122" rx="30" ry="4.5" fill="#000" opacity=".08" />
 			<ellipse cx="18" cy="80" rx="6.5" ry="8.5" fill="#fff4e4" stroke="#ffd6c2" stroke-width="2" />
@@ -63,5 +65,5 @@
 			<path d="M55 65 q5 5 10 0" fill="none" stroke="#7a3b4b" stroke-width="2.2" stroke-linecap="round" />
 			<ellipse cx="46" cy="115" rx="8" ry="4.5" fill="#ffc6a8" /><ellipse cx="74" cy="115" rx="8" ry="4.5" fill="#ffc6a8" />
 		</svg>
-	</button>
+	</Button>
 </div>

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "shadcn-svelte": {
+      "command": "bunx",
+      "args": [
+        "shadcn-svelte-mcp@1.14.0"
+      ],
+      "description": "Community MCP server for shadcn-svelte and Bits UI documentation and Lucide icons."
+    }
+  }
+}

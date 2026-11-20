@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
+	import { Input } from "$lib/components/ui/input";
 	import { Button } from "$lib/components/ui/button";
 	import TravelCard from "./TravelCard.svelte";
 	import Lightbox from "$lib/components/Lightbox.svelte";
@@ -54,7 +55,7 @@
 		await save({ d }).catch(() => toast.error("没存上，再试一次"));
 	}
 
-	let input: HTMLInputElement;
+	let input = $state<HTMLInputElement | null>(null);
 	let slot = $state(0);
 	let busy = $state<number | null>(null);
 	let viewing = $state<number | null>(null);
@@ -66,7 +67,7 @@
 			lbOpen = true;
 		} else {
 			slot = i;
-			input.click();
+			input?.click();
 		}
 	}
 	async function onFile(e: Event) {
@@ -101,7 +102,7 @@
 		if (viewing === null) return;
 		slot = viewing;
 		lbOpen = false;
-		input.click();
+		input?.click();
 	}
 	const TILTS = ["-rotate-3", "rotate-2", "-rotate-1"];
 </script>
@@ -109,12 +110,12 @@
 <TravelCard {name} meta={[AREA[area as keyof typeof AREA], type]} {desc} {q} wish={name} cat="place" {onedit}
 	summary={guide ? `照片与攻略${spots.ready || spots.get(key) ? ` · 已完成 ${doneCount}/${guide.steps.length}` : ""}` : tip ? "照片与贴士" : "地点照片"}>
 	{#if tip}<p class="rounded-xl bg-sand px-3 py-2 text-[13px] text-sand-ink">{tip}</p>{/if}
-	<input bind:this={input} type="file" accept="image/*" class="hidden" onchange={onFile} />
+	<Input bind:ref={input} type="file" accept="image/*" class="hidden" onchange={onFile} />
 	<div class="mb-1 grid grid-cols-3 gap-2.5 px-1 pt-1">
 		{#each [0, 1, 2] as i (i)}
 			{@const id = spot.p?.[i]}
-			<button
-				type="button"
+			<Button
+				variant="surface"
 				onclick={() => clickSlot(i)}
 				class={cn("polaroid p-1.5 pb-2 transition-transform hover:-translate-y-0.5 hover:rotate-0", TILTS[i])}
 				disabled={busy !== null || !spots.ready}
@@ -130,7 +131,7 @@
 					{/if}
 				</span>
 				<span class="mt-1 block truncate text-center text-[11px] text-[#5b6779]">{guide || id ? caps[i]?.label : "加照片"}</span>
-			</button>
+			</Button>
 		{/each}
 	</div>
 
@@ -141,8 +142,8 @@
 				{#each guide.steps as s, i (i)}
 					{@const on = !!spot.d?.[i]}
 					<li>
-						<button
-							type="button"
+						<Button
+							variant="surface"
 							aria-pressed={on}
 							disabled={!spots.ready}
 							onclick={(e) => toggleStep(i, e.currentTarget)}
@@ -152,7 +153,7 @@
 								{#if on}<Check class="size-3" strokeWidth={3} />{/if}
 							</span>
 							<span class={cn(on && "text-muted-foreground line-through")}>{s}</span>
-						</button>
+						</Button>
 					</li>
 				{/each}
 			</ol>

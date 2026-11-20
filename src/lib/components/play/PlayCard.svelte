@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
+	import * as Card from "$lib/components/ui/card";
 	import { cn } from "$lib/utils";
 
 	let {
@@ -12,10 +13,10 @@
 	const headingId = $props.id();
 </script>
 
-<section {id} aria-labelledby={headingId} class={cn("surface-card flex min-w-0 scroll-mt-36 md:scroll-mt-24 flex-col gap-4 p-5 md:p-6", className)}>
-	<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-		<h2 id={headingId} tabindex="-1" class="text-xl font-bold md:text-2xl">{title}</h2>
-		{#if meta}<span class="shrink-0 font-mono text-xs text-muted-foreground">{meta}</span>{/if}
-	</div>
-	{@render children()}
-</section>
+<Card.Root as="section" {id} aria-labelledby={headingId} class={cn("min-w-0 scroll-mt-36 overflow-visible md:scroll-mt-24", className)}>
+	<Card.Header>
+		<Card.Title id={headingId} tabindex={-1}>{title}</Card.Title>
+		{#if meta}<Card.Description>{meta}</Card.Description>{/if}
+	</Card.Header>
+	<Card.Content class="flex min-w-0 flex-1 flex-col gap-4">{@render children()}</Card.Content>
+</Card.Root>

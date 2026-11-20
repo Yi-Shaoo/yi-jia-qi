@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
+	import { Card } from "$lib/components/ui/card";
 	import { Button } from "$lib/components/ui/button";
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -81,18 +82,18 @@
 		{:else if picking}
 			<p role="status" class="text-sm">捡起中…</p>
 		{:else if opened}
-			<div class="w-full animate-pop rounded-xl bg-[#fffdf5] p-4 text-[#3b2f2a] shadow">
+			<Card variant="surface" class="w-full animate-pop p-4">
 				<p class="text-[15px] wrap-anywhere whitespace-pre-line">{opened.data.t}</p>
 				<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
 					<small class="text-xs opacity-70">来自 {WHO[opened.data.from]} · {fmtTime(opened.data.c)}</small>
 					<Button size="sm" variant="outline" onclick={() => (openId = null)}>收起</Button>
 				</div>
-			</div>
+			</Card>
 		{:else if waiting.length}
-			<button type="button" onclick={pickUp} class="flex flex-col items-center gap-1 text-sm font-medium">
+			<Button variant="surface" onclick={pickUp} class="flex flex-col items-center gap-1 text-sm font-medium">
 				{@render bottle("animate-bounce")}
 				捡一个瓶子（{waiting.length} 个待捡）
-			</button>
+			</Button>
 		{:else if !sent}
 			<p class="text-center text-sm">海面很安静。</p>
 		{/if}

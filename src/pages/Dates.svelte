@@ -6,7 +6,7 @@
 	const spots = useCollection("spots");
 </script>
 
-<PlaceCatalog spotsSettled={spots.status !== "loading"} kind="date" title="约会去哪" lede="中间点在 Long Beach 和 Palos Verdes 一带，两边开车时间相近。">
+<PlaceCatalog spotsSettled={spots.status !== "loading"} kind="date" title="约会去哪">
 	{#snippet spotsNotice()}
 		{#if spots.status === "error"}<CollectionNotice status={spots.status} retry={() => spots.load()} label="地点照片和攻略进度" />{/if}
 	{/snippet}

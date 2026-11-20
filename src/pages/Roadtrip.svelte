@@ -2,7 +2,7 @@
 	import PageHeader from "$lib/components/PageHeader.svelte";
 	import FilterChips from "$lib/components/FilterChips.svelte";
 	import TravelCard from "$lib/components/places/TravelCard.svelte";
-	import TravelSearch from "$lib/components/places/TravelSearch.svelte";
+	import TravelToolbar from "$lib/components/places/TravelToolbar.svelte";
 	import TravelResults from "$lib/components/places/TravelResults.svelte";
 	import { filterKey, matches } from "$lib/components/places/search";
 	import { query as param, replaceQuery } from "$lib/router.svelte";
@@ -15,15 +15,14 @@
 </script>
 
 <PageHeader title="Road-trip 路线" lede="车程从 LA 估算；从 Irvine 往南更近。" />
-<div class="mb-4 grid gap-3">
-	<TravelSearch bind:query={() => query, (q) => replaceQuery({ q })} label="搜索路线、季节或沿途站点" />
-	<FilterChips options={FILTERS} bind:value={() => kind, (v) => replaceQuery({ kind: v === "all" ? null : v })} label="按时长筛选" />
-</div>
+<TravelToolbar bind:query={() => query, (q) => replaceQuery({ q })} scope="路线、季节或沿途站点">
+	<FilterChips wrap options={FILTERS} bind:value={() => kind, (v) => replaceQuery({ kind: v === "all" ? null : v })} label="按时长筛选" />
+</TravelToolbar>
 {#key `${kind}:${query.trim()}`}
 	<TravelResults items={list} keyOf={(r) => r.name} noun="路线" onreset={() => replaceQuery({ q: null, kind: null })}>
 		{#snippet children(r)}
 			<TravelCard name={r.name} meta={[r.days, r.drive, r.season]} q={r.q} wish={`Road-trip：${r.name}`} cat="place" summary={`沿途 ${r.stops.length} 站`}>
-				<ol class="list-decimal space-y-2 pl-5 text-sm marker:text-sea">
+				<ol class="grid list-decimal gap-2 pl-5 text-sm marker:text-muted-foreground">
 					{#each r.stops as stop (stop)}<li>{stop}</li>{/each}
 				</ol>
 			</TravelCard>

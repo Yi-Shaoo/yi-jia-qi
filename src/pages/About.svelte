@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Label } from "$lib/components/ui/label";
+	import { Card, CardTitle, cardSurface } from "$lib/components/ui/card";
 	import { tick } from "svelte";
 	import { toast } from "svelte-sonner";
 	import PageHeader from "$lib/components/PageHeader.svelte";
@@ -129,13 +131,13 @@
 <PageHeader title="关于我们" />
 <CollectionNotice {status} retry={retryLoad} />
 
-<div class="grid gap-4 md:grid-cols-2">
+<div class="grid items-start gap-4 lg:grid-cols-2">
 <form id="about-drafts" aria-label="关于我们的条目" onsubmit={save} class="contents">
 	{#each allCats as cat (cat.id)}
 		{@const empty = status === "ready" && !about.docs.some((d) => d.data.cat === cat.id) && !pending.some(([k]) => k.startsWith(`${cat.id}|`))}
-		<section class="surface-card min-w-0 p-5">
-			<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-				<h2 class="min-w-0 text-xl font-bold wrap-anywhere">{cat.name}</h2>
+		<Card as="section" variant="surface" class="grid min-w-0 gap-4 p-5" aria-labelledby={`about-title-${cat.id}`}>
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<CardTitle id={`about-title-${cat.id}`}>{cat.name}</CardTitle>
 				{#if cat.custom && empty}
 					<ConfirmButton size="xs" class="text-muted-foreground" aria-label={`删除分类：${cat.name}`} confirmLabel={`确认删除分类：${cat.name}？`} description={`删除空分类「${cat.name}」后无法恢复。`} onconfirm={() => cats.remove(cat.id).catch(() => toast.error("分类没删掉，请重试"))}>删除分类</ConfirmButton>
 				{/if}
@@ -145,31 +147,31 @@
 					{@const key = `${cat.id}|${who}`}
 					{@const items = itemsOf(cat.id, who)}
 					<div class="flex min-w-0 flex-col gap-2">
-						<h3 class="text-sm font-semibold"><label for={`draft-${key}`}>{WHO[who]}</label></h3>
-						{#if items.length}
-							<ul class="flex flex-wrap gap-1.5">
-								{#each items as it (it.id)}
-									<li class={cn("inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl py-1 pr-1 pl-3 text-sm", who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>
-										<span class="min-w-0 wrap-anywhere">{it.data.t}</span>
-										<ConfirmButton size="icon-xs" class="h-auto min-h-6 max-w-full min-w-0 shrink rounded-full whitespace-normal wrap-anywhere" aria-label={`删除${WHO[who]}的${cat.name}：${it.data.t}`} confirmLabel={`确认删除${WHO[who]}的${cat.name}：${it.data.t}？`} onconfirm={() => about.remove(it.id).catch(() => toast.error("这项没删掉，请重试"))}><X /></ConfirmButton>
-									</li>
-								{/each}
-							</ul>
-						{/if}
+						<h3><Label for={`draft-${key}`} class={who === "yi" ? "text-yi" : "text-jq"}>{WHO[who]}</Label></h3>
 						<Input
 							id={`draft-${key}`} value={drafts[key] ?? ""} oninput={(e) => editDraft(key, e.currentTarget.value)} maxlength={40}
 							placeholder="加一项" aria-label={`${WHO[who]}的${cat.name}`} aria-invalid={issues[key] === "duplicate" || undefined} aria-describedby={issues[key] ? `issue-${key}` : undefined}
 						/>
 						{#if issues[key]}<p id={`issue-${key}`} role="status" class="text-sm wrap-anywhere text-destructive">{issues[key] === "duplicate" ? `「${drafts[key].trim()}」已存在` : "这项没能保存，请重试"}</p>{/if}
+						{#if items.length}
+							<ul class="flex flex-wrap gap-1.5">
+								{#each items as it (it.id)}
+									<li class={cn("inline-flex max-w-full items-center gap-1 rounded-2xl py-0.5 pr-1 pl-3 text-sm", who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>
+										<span class="min-w-0 wrap-anywhere">{it.data.t}</span>
+										<ConfirmButton size="icon-xs" class="shrink-0" aria-label={`删除${WHO[who]}的${cat.name}：${it.data.t}`} confirmLabel={`确认删除${WHO[who]}的${cat.name}：${it.data.t}？`} onconfirm={() => about.remove(it.id).catch(() => toast.error("这项没删掉，请重试"))}><X /></ConfirmButton>
+									</li>
+								{/each}
+							</ul>
+						{/if}
 					</div>
 				{/each}
 			</div>
-		</section>
+		</Card>
 	{/each}
 </form>
 
-<form aria-label="新建分类" onsubmit={addCat} class="surface-card grid min-w-0 content-start gap-2 p-5">
-	<label for="about-category" class="text-sm font-semibold">分类名</label>
+<form aria-label="新建分类" onsubmit={addCat} class={[cardSurface, "grid min-w-0 content-start gap-2 p-5"]}>
+	<Label for="about-category">分类名</Label>
 	<div class="flex items-center gap-2">
 		<Input id="about-category" bind:ref={catInput} bind:value={newCat} oninput={() => { catRevision++; catFailed = false; }} maxlength={16} placeholder="例如：喜欢的电影" aria-invalid={catDuplicate || undefined} aria-describedby={catProblem ? "category-problem" : undefined} class="h-11" />
 		<Button type="submit" class="h-11 rounded-full" disabled={!newCat.trim() || !cats.ready || categoryBusy || catDuplicate}><Plus />{catFailed && !catDuplicate ? "重试新建" : "新建分类"}</Button>
@@ -179,8 +181,8 @@
 </div>
 
 {#if pending.length}
-	<div class="sticky bottom-24 z-30 mx-auto mt-5 flex max-w-md items-center justify-between gap-3 rounded-3xl bg-foreground py-2 pr-2 pl-5 text-background shadow-lg md:bottom-6">
+	<div class={[cardSurface, "sticky bottom-24 z-30 mx-auto mt-5 flex max-w-md items-center justify-between gap-3 py-2 pr-2 pl-5 shadow-md md:bottom-6"]}>
 		<span role="status" class="text-sm">{summary}</span>
-		<Button type="submit" form="about-drafts" variant="secondary" size="sm" class="rounded-full" disabled={saving || status !== "ready" || !eligible.length}>{saving ? "保存中…" : retrying ? "重试" : eligible.length < pending.length ? "保存" : "全部保存"}</Button>
+		<Button type="submit" form="about-drafts" size="sm" disabled={saving || status !== "ready" || !eligible.length}>{saving ? "保存中…" : retrying ? "重试" : eligible.length < pending.length ? "保存" : "全部保存"}</Button>
 	</div>
 {/if}

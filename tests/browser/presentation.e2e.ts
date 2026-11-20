@@ -55,7 +55,7 @@ test("封面照片上半部保留原色，桌面白色手写签名压在左下�
 test("节日卡使用薄荷色，日期在两种外观下均随卡片文字配色", async ({ page, app }) => {
 	await app.docs("meta");
 	await page.goto("/");
-	const card = page.getByRole("link", { name: /11\.26.*感恩节和圣诞/ });
+	const card = page.getByRole("region", { name: "出去玩" }).getByRole("link", { name: /^感恩节和圣诞/ });
 	for (const theme of ["light", "dark"] as const) {
 		await page.emulateMedia({ colorScheme: theme });
 		await expect.poll(() => page.locator("html").evaluate(el => el.classList.contains("dark"))).toBe(theme === "dark");
@@ -147,18 +147,105 @@ test("两扇窗：明信片长文字恰好露 4 行不露半行，每日一问�
 	}
 });
 
-test("店招与按钮全站统一草莓粉：首页和其他页面的写日记按钮、导航图标、遮阳棚颜色一致", async ({ page, app }) => {
+test("首页与日记共用明暗主题，日记主操作不另设配色", async ({ page, app }) => {
+	await app.docs("diary");
+	await page.setViewportSize({ width: 390, height: 800 });
+	for (const scheme of ["light", "dark"] as const) {
+		await page.emulateMedia({ colorScheme: scheme });
+		await page.goto("/");
+		const write = page.locator('main a[href="/diary?write=today"]');
+		await expect(write).toBeVisible();
+		const action = await write.evaluate(el => getComputedStyle(el).backgroundColor);
+		const canvas = await page.locator("body").evaluate(el => getComputedStyle(el).backgroundColor);
+		await page.goto("/diary");
+		await expect(page.getByRole("main").getByRole("button", { name: "写下今天", exact: true })).toHaveCSS("background-color", action);
+		await expect(page.locator("body")).toHaveCSS("background-color", canvas);
+	}
+});
+
+test("首页和日记共用两种人物纸面，明暗切换后署名和文字仍可区分", async ({ page, app }) => {
+	await page.clock.setFixedTime(new Date(2026, 10, 19, 12));
+	await app.put("diary", "same-day", { date: "2026-11-19", c: 1, kind: "apart", title: "两份记录", yi: { t: "Yi 的文字", photo: "", fav: "" }, jq: { t: "Jia Qi 的文字", photo: "", fav: "" } });
+	for (const scheme of ["light", "dark"] as const) {
+		await page.emulateMedia({ colorScheme: scheme });
+		const palette = async (path: string) => {
+			await page.goto(path);
+			const cards = page.locator("main [data-who]").filter({ hasText: "的文字" });
+			await expect(cards).toHaveCount(2);
+			return cards.evaluateAll(els => Object.fromEntries(els.map(el => {
+				const s = getComputedStyle(el);
+				return [el.getAttribute("data-who"), [s.backgroundColor, s.borderTopColor, s.color]];
+			})));
+		};
+		const home = await palette("/");
+		if (scheme === "light") {
+			expect(home.yi).toEqual(["rgb(255, 253, 249)", "rgb(255, 180, 200)", "rgb(20, 36, 61)"]);
+			expect(home.jq[1]).toBe("rgb(169, 225, 239)");
+		}
+		expect(home.yi[1]).not.toBe(home.jq[1]);
+		expect(home.yi[0]).not.toBe(home.yi[2]);
+		expect(await palette("/diary")).toEqual(home);
+	}
+});
+
+test("桌面站内换页时店名、导航和账号位置保持不变", async ({ page, app }) => {
+	await app.docs("diary");
+	for (const width of [768, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto("/");
+		const header = page.getByRole("banner"), group = header.getByRole("button", { name: "我们的", exact: true });
+		await expect(group).toBeVisible();
+		await page.evaluate(() => document.fonts.ready);
+		const positions = () => Promise.all([header.getByRole("link", { name: "Yi & Jia Qi" }), group, header.getByRole("button", { name: "账号菜单" })].map(el => el.boundingBox()));
+		const baseline = await positions();
+		for (const [name, path] of [["约会日记", "/diary"], ["情侣相册", "/album"]]) {
+			await group.click();
+			await header.getByRole("link", { name, exact: true }).click();
+			await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText(name);
+			await expect(page).toHaveURL(url => url.pathname === path);
+			expect(await positions()).toEqual(baseline);
+		}
+	}
+});
+
+test("正常动态偏好下 Header 和账号浮层均无动画，菜单仍支持键盘操作", async ({ page, app }) => {
+	await app.docs("meta");
+	await page.emulateMedia({ reducedMotion: "no-preference" });
+	await page.setViewportSize({ width: 768, height: 900 });
+	await page.goto("/album");
+	const nav = page.getByRole("navigation", { name: "主导航" });
+	const group = nav.getByRole("button", { name: "我们的" });
+	await group.focus();
+	await page.keyboard.press("Enter");
+	const current = nav.getByRole("link", { name: "情侣相册" });
+	await expect(current).toHaveAttribute("aria-current", "page");
+	await expect(current).toBeInViewport({ ratio: 1 });
+	const panelWidth = (await nav.locator('[data-slot="navigation-menu-content"]').boundingBox())!.width;
+	expect(panelWidth).toBeGreaterThanOrEqual((await group.boundingBox())!.width);
+	expect(panelWidth).toBeLessThan(160);
+	await expect(group.locator("svg")).toHaveCSS("rotate", "none");
+	await expect(nav.locator('[data-slot="navigation-menu-content"]')).toHaveCSS("animation-name", "none");
+	await expect(group).toHaveCSS("transition-duration", "0s");
+	await page.keyboard.press("Escape");
+	await expect(current).not.toBeVisible();
+	const account = page.getByRole("button", { name: "账号菜单" });
+	await account.focus();
+	await page.keyboard.press("Enter");
+	await expect(page.getByRole("menu")).toHaveCSS("animation-name", "none");
+	await page.keyboard.press("Escape");
+	await expect(account).toBeFocused();
+});
+
+test("首页和其他页面均无顶栏写日记按钮，保留相同的遮阳棚和纯文字子菜单", async ({ page, app }) => {
 	await app.docs("meta");
 	await page.setViewportSize({ width: 1280, height: 900 });
 	const look = async () => {
-		const write = page.locator('header a[href="/diary?write=today"]');
-		await expect(write).toBeVisible();
+		await expect(page.locator('header a[href="/diary?write=today"]')).toHaveCount(0);
 		await page.locator("header").getByRole("button", { name: "我们的", exact: true }).click();
-		const icon = page.locator("header").getByRole("link", { name: /约会日记/ }).locator("span").first();
-		await expect(icon).toBeVisible();
+		const menu = page.locator('header [data-slot="navigation-menu-content"]');
+		await expect(menu.getByRole("link", { name: "约会日记", exact: true })).toBeVisible();
+		await expect(menu.locator("svg")).toHaveCount(0);
 		const result = {
-			button: await write.evaluate((el) => getComputedStyle(el).backgroundColor),
-			icon: await icon.evaluate((el) => getComputedStyle(el).color),
 			awning: await page.locator("header").evaluate((el) => getComputedStyle(el, "::after").backgroundImage),
 		};
 		await page.keyboard.press("Escape");
@@ -166,7 +253,6 @@ test("店招与按钮全站统一草莓粉：首页和其他页面的写日记�
 	};
 	await page.goto("/");
 	const home = await look();
-	expect(home.button).toBe("rgb(180, 65, 106)");
 	expect(home.awning).toContain("repeating-linear-gradient");
 	for (const path of ["/memories", "/play", "/wish"]) {
 		await page.goto(path);

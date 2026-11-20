@@ -100,10 +100,10 @@
 			{:else if !cur}
 				<Button class="rounded-full" onclick={turn}>抽个小任务</Button>
 			{:else if !cur.open}
-				<button type="button" onclick={openCapsule} class="flex flex-col items-center gap-3 text-sm font-medium">
+				<Button variant="surface" onclick={openCapsule} class="flex flex-col items-center gap-3 text-sm font-medium">
 					<span class="size-20 motion-safe:animate-bounce rounded-full border-2 border-black/10 shadow-lg" style:background={`linear-gradient(180deg, ${cur.c} 50%, #fff 50%)`}></span>
 					打开扭蛋
-				</button>
+				</Button>
 			{:else}
 				<div class="w-full animate-pop rounded-2xl p-4" style:background={`color-mix(in srgb, ${cur.c} 35%, var(--card))`}>
 					<div class="text-xs font-semibold text-muted-foreground">今天的小任务</div>

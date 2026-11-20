@@ -23,16 +23,40 @@ test("手机上四个出游页的全部及各分类初始高度不超过 6000px"
 	await info.attach("360px 分类实测高度", { body: JSON.stringify(heights), contentType: "application/json" });
 });
 
-test("全库搜索与地区取交集，加载更多不绕过筛选，空结果可恢复", async ({ page, app }) => {
+test("地点工具栏桌面等高对齐，窄屏按搜索、筛选顺序排列", async ({ page, app }) => {
+	await app.docs("custom");
+	await page.goto("/dates");
+	const bar = page.getByRole("search");
+	const search = bar.getByRole("searchbox");
+	const chip = bar.getByRole("radio", { name: "全部" }).locator("..");
+	for (const width of [1280, 1024, 360]) {
+		await page.setViewportSize({ width, height: 800 });
+		const [s, c] = await Promise.all([search.boundingBox(), chip.boundingBox()]);
+		expect(c!.height).toBe(s!.height);
+		if (width >= 1024) expect(c!.y).toBeCloseTo(s!.y, 0);
+		else expect(c!.y).toBeGreaterThanOrEqual(s!.y + s!.height);
+	}
+});
+
+test("约会地点滚动到末尾自动追加下一批", async ({ page, app }) => {
+	await app.docs("custom");
+	await page.goto("/dates");
+	const cards = page.getByRole("article");
+	await expect(cards).toHaveCount(9);
+	await expect(page.getByRole("button", { name: /加载更多/ })).toHaveCount(0);
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+	await expect(cards).toHaveCount(18);
+});
+
+test("全库搜索与地区取交集，自动追加不绕过筛选，空结果可恢复", async ({ page, app }) => {
 	await app.docs("custom");
 	await page.goto("/food");
-	const cards = page.getByRole("article"), search = page.getByRole("searchbox"), more = page.getByRole("button", { name: "加载更多餐厅" });
+	const cards = page.getByRole("article"), search = page.getByRole("searchbox");
 	await expect(cards).toHaveCount(9);
-	await more.click();
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 	await expect(cards).toHaveCount(18);
-	await more.click();
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 	await expect(cards).toHaveCount(24);
-	await expect(more).toHaveCount(0);
 	await search.fill("  nApLes   肋排 ");
 	await expect(cards).toHaveCount(1);
 	await expect(cards.getByText("吃完去 Naples 岛散步")).toHaveCount(0);

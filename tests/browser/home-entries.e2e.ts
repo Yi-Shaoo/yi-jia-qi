@@ -3,8 +3,32 @@ import { expect, test } from "./fixture";
 const day = "2026-11-10";
 const emptySide = { t: "", fav: "", photo: "" };
 
+test("首页灵感的两个操作在加入心愿前后都等宽等高", async ({ page, app }) => {
+	await app.docs("wishes");
+	await page.goto("/");
+	const shuffle = page.getByRole("button", { name: "换一个", exact: true });
+	const section = page.getByRole("region", { name: "今天的灵感" });
+	const title = section.getByRole("heading", { level: 3 });
+	const previous = await title.innerText();
+	await shuffle.click();
+	await expect(title).not.toHaveText(previous);
+	const add = section.getByRole("button", { name: /^加入心愿/ });
+	const added = section.getByRole("link", { name: /^已在心愿/ });
+	for (const action of [add, added]) {
+		for (const width of [360, 1280]) {
+			await page.setViewportSize({ width, height: 800 });
+			await expect(action).toBeVisible();
+			const [a, b] = await Promise.all([shuffle.boundingBox(), action.boundingBox()]);
+			expect(b!.width).toBeCloseTo(a!.width, 0);
+			expect(b!.height).toBe(a!.height);
+			expect(a!.height).toBeGreaterThanOrEqual(44);
+		}
+		if (action === add) await add.click();
+	}
+});
+
 for (const mine of [true, false]) {
-	test(`${mine ? "本人" : "仅对方"}已写今天：首页、顶栏和日记页的入口与打开的内容一致`, async ({ page, app, site }) => {
+	test(`${mine ? "本人" : "仅对方"}已写今天：首页和日记页的入口与打开的内容一致`, async ({ page, app, site }) => {
 		await page.clock.setFixedTime(new Date(2026, 10, 10, 12));
 		await app.put("diary", "first", { date: day, kind: "apart", title: "同行", c: 1,
 			yi: { ...emptySide, fav: "等红灯时看到彩虹" }, jq: { ...emptySide, t: "  " } });
@@ -16,9 +40,7 @@ for (const mine of [true, false]) {
 		const today = page.locator("section").filter({ has: page.getByRole("heading", { name: "同一天，两扇窗" }) });
 		await expect(page.getByRole("link", { name: label, exact: true })).toHaveCount(1);
 		await expect(today.getByText("等红灯时看到彩虹", { exact: true })).toBeVisible();
-		await page.setViewportSize({ width: 1280, height: 900 });
-		await expect(page.getByRole("link", { name: label, exact: true })).toHaveCount(1);
-		await page.getByRole("banner").getByRole("link", { name: label }).click();
+		await hero.getByRole("link", { name: label, exact: true }).click();
 		const editor = page.getByRole("dialog", { name: "同行" });
 		await expect(editor).toBeVisible();
 		await expect(editor.getByLabel("最喜欢的瞬间", { exact: true })).toHaveValue(mine ? "等红灯时看到彩虹" : "");
@@ -29,7 +51,7 @@ for (const mine of [true, false]) {
 	});
 }
 
-test("手机首屏、桌面页头和日记主按钮跟随本机草稿；恢复、丢掉后无需刷新", async ({ page, app }) => {
+test("手机首屏和日记主按钮跟随本机草稿；恢复、丢掉后无需刷新", async ({ page, app }) => {
 	await page.clock.setFixedTime(new Date(2026, 10, 10, 12));
 	await app.docs("diary");
 	await page.goto("/");
@@ -37,7 +59,7 @@ test("手机首屏、桌面页头和日记主按钮跟随本机草稿；恢复�
 	const editor = page.getByRole("dialog", { name: "新日记" });
 	await editor.getByLabel("正文", { exact: true }).fill("等天晴一起走");
 	await editor.getByLabel("标题", { exact: true }).fill("海边散步");
-	await editor.getByRole("button", { name: "存草稿" }).click();
+	await editor.getByRole("button", { name: "关闭", exact: true }).click();
 	await expect(page.getByText("今天 · 海边散步", { exact: true })).toBeVisible();
 	const resume = page.getByRole("button", { name: "继续写草稿", exact: true });
 	await expect(resume).toHaveCount(1);
@@ -51,13 +73,15 @@ test("手机首屏、桌面页头和日记主按钮跟随本机草稿；恢复�
 	await page.keyboard.press("Escape");
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.getByRole("banner").getByRole("link", { name: "首页", exact: true }).click();
-	await page.getByRole("banner").getByRole("link", { name: "继续写草稿" }).click();
+	await page.getByRole("main").getByRole("link", { name: /去日记/ }).click();
+	await resume.click();
 	await expect(editor.getByLabel("正文", { exact: true })).toHaveValue("等天晴一起走");
 	await editor.getByRole("button", { name: "丢掉草稿" }).click();
 	await page.keyboard.press("Escape");
 	await expect(page.getByRole("button", { name: "写下今天", exact: true })).toBeEnabled();
 	await page.getByRole("banner").getByRole("link", { name: "首页", exact: true }).click();
-	await expect(page.getByRole("banner").getByRole("link", { name: "写下今天" })).toBeVisible();
+	await page.setViewportSize({ width: 390, height: 800 });
+	await expect(page.getByRole("main").getByRole("link", { name: "写下今天" })).toBeVisible();
 });
 
 test("其他标签页存下的草稿即时更新；隔天切回不会误开昨天的草稿", async ({ page, app, site }) => {

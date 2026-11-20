@@ -1,11 +1,12 @@
 <script lang="ts">
-	import Search from "@lucide/svelte/icons/search";
 	import { Input } from "$lib/components/ui/input";
+	import { Label } from "$lib/components/ui/label";
 
-	let { query = $bindable(), label }: { query: string; label: string } = $props();
+	let { query = $bindable(), scope }: { query: string; scope: string } = $props();
+	const id = $props.id();
 </script>
 
-<div class="relative w-full sm:max-w-sm">
-	<Search aria-hidden="true" class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-	<Input type="search" aria-label={label} placeholder={label} bind:value={query} class="h-11 bg-card pl-10" />
+<div class="flex min-w-0 items-center gap-3">
+	<Label for={id} class="shrink-0">搜索<span class="sr-only">{scope}</span></Label>
+	<Input {id} type="search" placeholder={scope} bind:value={query} class="flex-1 bg-card" />
 </div>

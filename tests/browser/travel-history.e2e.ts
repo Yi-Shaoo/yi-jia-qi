@@ -76,7 +76,7 @@ test("餐厅加载更多后返回保留地区、末张和此前展开的贴士",
 	await page.goto("/food?area=la");
 	const cards = page.getByRole("article");
 	await expect(cards).toHaveCount(9);
-	await page.getByRole("button", { name: "加载更多餐厅" }).click();
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 	await expect(cards).toHaveCount(11);
 	await cards.nth(9).locator("summary").click();
 	const { link, top } = await visitWish(page, cards.nth(10));
@@ -112,7 +112,7 @@ test("重新加载心愿后返回，等待异步地点；源卡移到下一批�
 		await page.goBack({ waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("searchbox")).toBeVisible();
 		data.resolve();
-		await expect(cards).toHaveCount(10);
+		await expect(cards.nth(9).getByRole("heading", { name: sourceName, exact: true })).toBeAttached();
 		await restored(link, top);
 		image.resolve();
 		await expect.poll(() => above.locator("img").evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);

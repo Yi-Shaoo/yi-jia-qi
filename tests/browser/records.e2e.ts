@@ -50,14 +50,19 @@ test("同日两篇精确编辑；整篇确认列出两人的照片且可取消",
 
 test("只有照片与文字草稿的界限准确，发布后不再恢复旧草稿", async ({ page, app }) => {
 	await page.goto("/diary?write=today");
-	const editor = page.getByRole("dialog"), keep = editor.getByRole("button", { name: "存草稿" });
+	const editor = page.getByRole("dialog");
+	await expect(editor.getByRole("button", { name: "存草稿" })).toHaveCount(0);
 	await editor.locator('input[type="file"]').setInputFiles(png);
 	await expect(editor.getByText(/草稿只存文字/)).toBeVisible();
-	await keep.click();
-	await expect(editor.getByText(/只有照片变更/)).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.getByRole("button", { name: "写下今天", exact: true }).click();
+	await expect(editor.getByRole("button", { name: "移除照片" })).toHaveCount(0);
 	await editor.getByLabel("正文", { exact: true }).fill("一路沿着海边走");
-	await keep.click();
+	await expect(editor.getByText(/文字草稿已自动保存/)).toBeVisible();
+	expect(await app.docs("diary")).toHaveLength(0);
+	await page.reload();
 	await page.getByRole("button", { name: "继续写草稿", exact: true }).click();
+	await expect(editor.getByText(/已恢复文字草稿/)).toBeVisible();
 	await expect(editor.getByLabel("正文", { exact: true })).toHaveValue("一路沿着海边走");
 	await expect(editor.getByRole("button", { name: "移除照片" })).toHaveCount(0);
 	await editor.getByRole("button", { name: "发布", exact: true }).click();

@@ -6,6 +6,7 @@
 	let {
 		ref = $bindable(null),
 		viewportRef = $bindable(null),
+		viewportProps = {},
 		class: className,
 		orientation = "vertical",
 		scrollbarXClasses = "",
@@ -17,6 +18,7 @@
 		scrollbarXClasses?: string | undefined;
 		scrollbarYClasses?: string | undefined;
 		viewportRef?: HTMLElement | null;
+		viewportProps?: Omit<ScrollAreaPrimitive.ViewportProps, "children" | "child" | "ref">;
 	} = $props();
 </script>
 
@@ -27,9 +29,10 @@
 	{...restProps}
 >
 	<ScrollAreaPrimitive.Viewport
+		{...viewportProps}
 		bind:ref={viewportRef}
 		data-slot="scroll-area-viewport"
-		class="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+		class={cn("size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1", viewportProps.class)}
 	>
 		{@render children?.()}
 	</ScrollAreaPrimitive.Viewport>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import PageHeader from "$lib/components/PageHeader.svelte";
+	import { Button } from "$lib/components/ui/button";
 	import PetCard from "$lib/components/play/PetCard.svelte";
 	import DailyQuestion from "$lib/components/play/DailyQuestion.svelte";
 	import Gacha from "$lib/components/play/Gacha.svelte";
@@ -70,9 +71,9 @@
 
 <nav bind:this={rail} aria-label="一起玩模块" class="sticky top-16 z-30 -mx-4 mb-4 flex gap-2 overflow-x-auto border-b bg-background px-4 py-2 md:static md:mx-0 md:flex-wrap md:border-0 md:px-0">
 	{#each modules as [id, label, Icon] (id)}
-		<a href={`#${id}`} onclick={(event) => jump(event, id)} aria-current={current === id ? "location" : undefined} class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border bg-card px-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring aria-[current=location]:border-sea aria-[current=location]:bg-sea-soft aria-[current=location]:text-sea">
+		<Button href={`#${id}`} onclick={(event) => jump(event, id)} variant={current === id ? "secondary" : "outline"} aria-current={current === id ? "location" : undefined}>
 			<Icon aria-hidden="true" class="size-4" />{label}
-		</a>
+		</Button>
 	{/each}
 </nav>
 

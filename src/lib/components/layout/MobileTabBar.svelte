@@ -1,16 +1,18 @@
 <script lang="ts">
 	import * as Sheet from "$lib/components/ui/sheet";
+	import { Entry } from "$lib/components/ui/navigation-menu";
+	import { Button } from "$lib/components/ui/button";
 	import { NAV_GROUPS, HOME_LINK, groupOf, type NavGroup } from "$lib/nav";
 	import { route } from "$lib/router.svelte";
-	import { cn } from "$lib/utils";
-	import ChevronRight from "@lucide/svelte/icons/chevron-right";
 
 	const active = $derived(groupOf(route.path));
 	let open = $state(false);
 	let group = $state<NavGroup | null>(null);
+	let trigger: HTMLElement | null = null;
 
-	function openGroup(g: NavGroup) {
+	function openGroup(g: NavGroup, from: HTMLElement) {
 		group = g;
+		trigger = from;
 		open = true;
 	}
 	$effect(() => {
@@ -19,64 +21,26 @@
 	});
 </script>
 
-<nav
-	aria-label="主导航"
-	class="tab-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 pb-[env(safe-area-inset-bottom)] md:hidden"
->
-	<a
-		href={HOME_LINK.href}
-		class={cn(
-			"flex h-16 flex-col items-center justify-center gap-0.5 text-[11px]",
-			active === "home" ? "font-semibold text-primary" : "text-muted-foreground",
-		)}
-		aria-current={active === "home" ? "page" : undefined}
-	>
-		<span class={cn("grid h-7 w-12 place-items-center rounded-full", active === "home" && "bg-secondary")}><HOME_LINK.icon aria-hidden="true" class="size-5" /></span>
-		{HOME_LINK.label}
-	</a>
+<nav aria-label="主导航" class="tab-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 pb-[env(safe-area-inset-bottom)] md:hidden">
+	<Button href={HOME_LINK.href} variant="tab" size="tab" data-current={active === "home"} aria-current={active === "home" ? "page" : undefined}>
+		<HOME_LINK.icon aria-hidden="true" />{HOME_LINK.label}
+	</Button>
 	{#each NAV_GROUPS as g (g.key)}
-		<button
-			type="button"
-			onclick={() => openGroup(g)}
-			aria-haspopup="dialog"
-			aria-expanded={open && group?.key === g.key}
-			class={cn(
-				"flex h-16 flex-col items-center justify-center gap-0.5 text-[11px]",
-				active === g.key ? "font-semibold text-primary" : "text-muted-foreground",
-			)}
-		>
-			<span class={cn("grid h-7 w-12 place-items-center rounded-full", active === g.key && "bg-secondary")}><g.icon aria-hidden="true" class="size-5" /></span>
-			{g.label}
-		</button>
+		<Button variant="tab" size="tab" data-current={active === g.key} aria-haspopup="dialog" aria-expanded={open && group?.key === g.key} onclick={(e) => openGroup(g, e.currentTarget)}>
+			<g.icon aria-hidden="true" />{g.label}
+		</Button>
 	{/each}
 </nav>
 
 <Sheet.Root bind:open>
-	<Sheet.Content side="bottom" class="max-h-[90dvh] overflow-y-auto rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+16px)]">
+	<Sheet.Content side="bottom" class="max-h-[90dvh] overflow-y-auto rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+16px)]" onCloseAutoFocus={(e) => { if (trigger) { e.preventDefault(); trigger.focus({ preventScroll: true }); } }}>
 		{#if group}
-			<Sheet.Header>
-				<Sheet.Title class="font-display text-xl">{group.label}</Sheet.Title>
-			</Sheet.Header>
-			<ul class="flex flex-col gap-1 px-4">
-				{#each group.links as l (l.href)}
-					<li>
-						<a
-							href={l.href}
-							aria-current={route.path === l.href ? "page" : undefined}
-							onclick={() => (open = false)}
-							class={cn(
-								"flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2",
-								route.path === l.href ? "bg-secondary" : "hover:bg-muted",
-							)}
-						>
-							<span class="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary"><l.icon class="size-5" /></span>
-							<span class="flex flex-1 flex-col">
-								<span class="font-semibold">{l.label}</span>
-								{#if l.desc}<span class="text-[13px] text-muted-foreground">{l.desc}</span>{/if}
-							</span>
-							<ChevronRight class="size-4 text-muted-foreground" />
-						</a>
-					</li>
+			<Sheet.Header><Sheet.Title>{group.label}</Sheet.Title></Sheet.Header>
+			<ul class="grid gap-1 px-4">
+				{#each group.links as link (link.href)}
+					<li><Button variant="navigation" size="row" href={link.href} aria-current={route.path === link.href ? "page" : undefined} onclick={() => { if (link.href !== route.path) trigger = null; open = false; }}>
+						<Entry label={link.label} />
+					</Button></li>
 				{/each}
 			</ul>
 		{/if}

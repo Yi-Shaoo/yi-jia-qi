@@ -42,16 +42,17 @@ export function invalidField(form: DiaryFields, hasPhoto: boolean): "date" | "ti
 export function publication(base: DiaryFields, form: DiaryFields, who: Who, current?: Diary, changedPhoto?: string) {
 	const fields = current ? { ...diaryFields(current, who, form.date), ...textChanges(base, form, false) } : form;
 	const existing = current?.[who];
+	const personalPlaceChanged = fields.kind === "apart" && (!current || base.place !== form.place);
 	const side: DiarySide = {
 		...existing,
 		t: existing && base.text === form.text ? existing.t : fields.text.trim().slice(0, 800),
 		fav: existing && base.fav === form.fav ? existing.fav : fields.fav.trim().slice(0, 80),
-		...(!current || base.place !== form.place ? { pl: fields.place.trim().slice(0, 40) } : {}),
+		...(personalPlaceChanged ? { pl: fields.place.trim().slice(0, 40) } : {}),
 		photo: changedPhoto ?? existing?.photo ?? "",
 	};
 	const shared = { date: fields.date, kind: fields.kind, title: fields.title.trim().slice(0, 40) };
 	const patch: Partial<Diary> = {};
-	if (!current || base.text !== form.text || base.fav !== form.fav || base.place !== form.place || changedPhoto !== undefined) patch[who] = side;
+	if (!current || base.text !== form.text || base.fav !== form.fav || personalPlaceChanged || changedPhoto !== undefined) patch[who] = side;
 	if (!current || base.date !== form.date) patch.date = shared.date;
 	if (!current || base.kind !== form.kind) patch.kind = shared.kind;
 	if (!current || base.title !== form.title) patch.title = shared.title;

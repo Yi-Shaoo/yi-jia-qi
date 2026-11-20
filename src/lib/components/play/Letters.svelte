@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
+	import { Card } from "$lib/components/ui/card";
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
@@ -95,7 +96,7 @@
 					{@const canView = mine || ready}
 					{@const expanded = openId === l.id && canView}
 					<li class={cn("min-w-0 rounded-2xl border", !mine && ready && !l.data.read && "border-coral bg-coral-soft/50")}>
-						<button type="button" onclick={() => view(l)} disabled={!canView} aria-expanded={canView ? expanded : undefined} aria-controls={expanded ? `lt-letter-${l.id}` : undefined}
+						<Button variant="surface" onclick={() => view(l)} disabled={!canView} aria-expanded={canView ? expanded : undefined} aria-controls={expanded ? `lt-letter-${l.id}` : undefined}
 							class="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors enabled:hover:bg-muted/60">
 							<span class={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", l.data.from === "yi" ? "bg-yi-soft text-yi" : "bg-jq-soft text-jq")}>
 								{#if l.data.read}<MailOpen aria-hidden="true" class="size-5" />{:else}<Mail aria-hidden="true" class="size-5" />{/if}
@@ -105,15 +106,15 @@
 								<small class="text-xs text-muted-foreground">{displayDate(l.data.open)} 可拆{l.data.read ? " · 已拆" : ready ? " · 未拆" : !mine ? ` · 还有 ${dayDiff(l.data.open)} 天` : ""}</small>
 							</span>
 							{#if expanded}<span class="shrink-0 text-sm">收起</span>{/if}
-						</button>
+						</Button>
 						{#if expanded}
-							<div id={`lt-letter-${l.id}`} class="mx-3 mb-3 animate-pop rounded-xl bg-[#fffdf5] p-4 text-[#3b2f2a]">
+							<Card variant="surface" id={`lt-letter-${l.id}`} class="mx-3 mb-3 animate-pop p-4">
 								<p class="text-[15px] leading-7 wrap-anywhere whitespace-pre-line">{l.data.t}</p>
 								<small class="mt-3 block text-xs opacity-70">{fmtTime(l.data.c)} 寄出</small>
 								{#if mine}
 									<ConfirmButton variant="outline" class="mt-3 rounded-full" confirmLabel="确认撤回" description={`${l.data.read ? `${partner} 已拆过这封信。` : ""}撤回会从两人的信箱删除这封信，无法恢复。`} onconfirm={() => recall(l.id)}>撤回这封信</ConfirmButton>
 								{/if}
-							</div>
+							</Card>
 						{/if}
 					</li>
 				{/each}

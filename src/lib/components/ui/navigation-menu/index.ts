@@ -1,3 +1,4 @@
+export { default as Entry } from "./navigation-menu-entry.svelte";
 import Content from "./navigation-menu-content.svelte";
 import Indicator from "./navigation-menu-indicator.svelte";
 import Item from "./navigation-menu-item.svelte";

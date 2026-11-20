@@ -1,4 +1,5 @@
 <script lang="ts">
+	import EmptyState from "$lib/components/EmptyState.svelte";
 	import { onDestroy, tick } from "svelte";
 	import { toast } from "svelte-sonner";
 	import PageHeader from "$lib/components/PageHeader.svelte";
@@ -80,7 +81,7 @@
 	let message = $state("");
 	let busy = $state(false);
 	let saveFailed = $state(false);
-	let fileInput = $state<HTMLInputElement>();
+	let fileInput = $state<HTMLInputElement | null>(null);
 	const savedRecord = $derived(draft?.saved ? memories.get(draft.id) : undefined);
 	const failed = $derived(draft?.photos.flatMap((p) => ("file" in p && p.error ? [{ name: p.file.name, error: p.error }] : [])) ?? []);
 	const hasFailures = $derived(saveFailed || failed.length > 0);
@@ -164,17 +165,13 @@
 <CollectionNotice status={memories.status} retry={() => memories.load()} />
 {#if memories.ready && item && !target}<p role="status" class="mb-4 text-sm text-muted-foreground">找不到这段回忆。</p>{/if}
 {#if empty}
-	<div class="surface-card flex flex-col items-start gap-3 p-6">
-		<p>还没有回忆</p>
-		{@render addMemory()}
-	</div>
+	<EmptyState message="还没有回忆" children={addMemory} />
 {:else if list.length}
 	<ol class="relative flex flex-col gap-10 pl-8 before:absolute before:top-2 before:bottom-0 before:left-[11px] before:w-0.5 before:bg-border md:pl-12 md:before:left-[19px]">
-		{#each list as m, idx (m.id)}
+		{#each list as m, index (m.id)}
 			<li class="relative">
-				<span class="absolute top-1.5 -left-[27px] size-3 rounded-full shadow-[0_0_0_4px_var(--background)] md:-left-[35px] md:size-3.5"
-					style:background={["var(--coral)", "var(--sea)", "var(--sun)"][idx % 3]} aria-hidden="true"></span>
-				<div class={m.data.photos?.length ? "grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-8" : "max-w-prose"}>
+				<span aria-hidden="true" class={["absolute top-1.5 -left-[25px] size-3 rounded-full ring-4 ring-background md:-left-[35px] md:size-3.5", ["bg-coral", "bg-primary", "bg-sun"][index % 3]]}></span>
+				<article class={m.data.photos?.length ? "grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-8" : "max-w-prose"}>
 				<div class="min-w-0">
 				<time datetime={m.data.date} class="font-mono text-xs text-muted-foreground">{m.data.dlabel || fmtDots(m.data.date)}</time>
 				<div class="mt-1 flex items-start gap-2">
@@ -184,17 +181,17 @@
 				{#if m.data.text}<MemoryText text={m.data.text} />{/if}
 				</div>
 				{#if m.data.photos?.length}
-					<div class="grid min-w-0 content-start grid-cols-2 gap-4 sm:grid-cols-3">
+					<div class="grid min-w-0 items-start grid-cols-2 gap-4 sm:grid-cols-3">
 						{#each m.data.photos as p, i}
 							{@const name = photoName(m.data.title, i)}
-							<Polaroid id={`memory-photo-${m.id}-${i}`} src={fileUrl(p)} alt={name} aria-label={`查看${name}`}
+							<Polaroid liftLandscape id={`memory-photo-${m.id}-${i}`} src={fileUrl(p)} alt={name} aria-label={`查看${name}`}
 								stamp={i === 0 && !m.data.dlabel ? filmStamp(m.data.date) : ""} tilt={[-2, 1.5, -1, 2][i % 4]}
-								imgClass="aspect-[4/5] h-auto" class="p-2 pb-3"
+								imgClass="h-auto" class="p-2 pb-3"
 								onclick={() => { lb = { id: m.id, photo: p, index: i }; lbOpen = true; }} />
 						{/each}
 					</div>
 				{/if}
-				</div>
+				</article>
 			</li>
 		{/each}
 	</ol>
@@ -202,7 +199,7 @@
 		<section aria-labelledby="memory-plans" class="mt-10 max-w-xl border-t pt-5">
 			<div class="flex flex-wrap items-baseline justify-between gap-2">
 				<h2 id="memory-plans" class="text-lg font-bold">节日计划</h2>
-				<a href="/wish" class="inline-flex min-h-11 items-center text-sm text-sea underline underline-offset-4">心愿清单</a>
+				<Button href="/wish" variant="link">心愿清单</Button>
 			</div>
 			<ul class="mt-2 grid gap-1.5">
 				{#each plans as plan (plan.date)}
@@ -281,13 +278,13 @@
 						{#each draft.photos as p, i}
 							<div class="relative size-20 overflow-hidden rounded-lg bg-muted">
 								<img src={"preview" in p ? p.preview : fileUrl(p.asset)} alt={"file" in p ? p.file.name : ""} class="size-full object-cover" />
-								<button type="button" class="photo-remove" aria-label={`移除${photoName(draft.title, i)}`} onclick={() => removePreview(i)}><X aria-hidden="true" /></button>
+								<Button variant="surface" class="photo-remove" aria-label={`移除${photoName(draft.title, i)}`} onclick={() => removePreview(i)}><X aria-hidden="true" /></Button>
 							</div>
 						{/each}
-						<button type="button" aria-describedby="m-formats" onclick={() => fileInput?.click()} class="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:border-sea hover:text-sea">
+						<Button variant="outline" aria-describedby="m-formats" onclick={() => fileInput?.click()} class="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:border-sea hover:text-sea">
 							<ImagePlus class="size-5" />加照片
-						</button>
-						<input bind:this={fileInput} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
+						</Button>
+						<Input bind:ref={fileInput} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
 					</div>
 					<p id="m-formats" class="mt-2 text-xs text-muted-foreground">JPG、PNG 等浏览器可读取的图片</p>
 				</fieldset>

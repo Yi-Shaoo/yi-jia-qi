@@ -49,14 +49,14 @@ test("Jia Qi 编辑只有历史共享地点的日记：恢复文字草稿不搬�
 	await page.goto("/diary");
 	const card = page.getByRole("article").filter({ hasText: "旧日记" });
 	const edit = card.getByRole("button", { name: "改我的这一边" });
-	await expect(card.getByText("共享地点：图书馆")).toBeVisible();
+	await expect(card.getByText("共享地点：图书馆")).toHaveCount(0);
 	await edit.click();
 	const editor = page.getByRole("dialog");
-	await expect(editor.getByText("共享地点：图书馆")).toBeVisible();
+	await expect(editor.getByLabel("共享地点", { exact: true })).toHaveCount(0);
 	const place = editor.getByLabel("我在哪");
 	await expect(place).toHaveValue("");
 	await editor.getByLabel("正文", { exact: true }).fill("补上正文");
-	await editor.getByRole("button", { name: "存草稿" }).click();
+	await page.keyboard.press("Escape");
 	await card.getByRole("button", { name: "继续写草稿" }).click();
 	await expect(editor.getByLabel("正文", { exact: true })).toHaveValue("补上正文");
 	await expect(place).toHaveValue("");
@@ -67,8 +67,8 @@ test("Jia Qi 编辑只有历史共享地点的日记：恢复文字草稿不搬�
 	await edit.click();
 	await place.fill("图书馆");
 	await publish.click();
-	await expect(card.getByText("共享地点：图书馆")).toBeVisible();
-	await expect(card.getByText("图书馆", { exact: true })).toBeVisible();
+	await expect(card.getByText("共享地点：图书馆")).toHaveCount(0);
+	await expect(card.getByRole("region", { name: "From Jia Qi" }).getByText("图书馆", { exact: true })).toBeVisible();
 	await edit.click();
 	await place.fill("");
 	await publish.click();

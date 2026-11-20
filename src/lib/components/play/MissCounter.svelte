@@ -3,6 +3,7 @@
 	import { toast } from "svelte-sonner";
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
+	import { ScrollArea } from "$lib/components/ui/scroll-area";
 	import { Label } from "$lib/components/ui/label";
 	import { sendMissNote, type MissNoteDraft } from "./miss-note";
 	import PlayCard from "./PlayCard.svelte";
@@ -35,14 +36,14 @@
 		}
 		return { c, best };
 	});
-	const rows = $derived(miss.docs.slice().sort((a, b) => b.data.c - a.data.c).slice(0, 8));
+	const rows = $derived(miss.docs.slice().sort((a, b) => b.data.c - a.data.c));
 
 	let combo = $state(0);
 	let beat = $state(false);
 	const draft = $state<MissNoteDraft>({ text: "", edits: 0, sending: false });
 	let noteInput = $state<HTMLInputElement | null>(null);
 	let timer = 0;
-	let btn: HTMLButtonElement;
+	let btn = $state<HTMLButtonElement | null>(null);
 
 	async function flush(text = "") {
 		clearTimeout(timer);
@@ -105,15 +106,15 @@
 		{/each}
 	</div>
 	<div class="flex flex-col items-center gap-2 py-2">
-		<button
-			bind:this={btn}
+		<Button variant="surface"
+			bind:ref={btn}
 			type="button"
 			onclick={tap}
 			aria-label="想你了，可以连着点"
 			class={cn("flex size-28 items-center justify-center rounded-full bg-coral text-5xl text-primary-foreground shadow-[0_10px_30px_-8px_var(--coral)] transition-transform active:scale-95", beat && "animate-beat")}
 		>
 			<Heart aria-hidden="true" class="size-12 fill-current" />
-		</button>
+		</Button>
 		<div aria-live="polite" class={cn("h-7 font-display text-lg font-extrabold", combo >= 10 ? "text-coral" : combo >= 5 ? "text-sun" : "text-sea")}>
 			{combo ? `x${combo} ${combo >= 10 ? "超级连击！" : "连击！"}` : ""}
 		</div>
@@ -130,18 +131,23 @@
 		</div>
 	</form>
 	<div class="flex flex-col gap-2">
-		<div class="text-sm font-semibold">想你记录</div>
-		{#if !rows.length}<p class="text-sm text-muted-foreground">还没有记录，点一下大爱心试试。</p>{/if}
-		{#each rows as m (m.id)}
-			{@const n = nOf(m.data.n)}
-			<div class="flex flex-col gap-1 border-b pb-2 text-sm last:border-b-0">
-				<div class="flex items-center gap-2">
-					<span class="w-20 shrink-0 font-mono text-xs text-muted-foreground">{fmtTime(m.data.c, keyOf(new Date(m.data.c)) !== today)}</span>
-					<span class={cn("font-semibold", m.data.who === "yi" ? "text-yi" : "text-jq")}>{WHO[m.data.who]}</span>
-					<span>{n > 1 ? `一口气想了你 ${n} 次` : "想了你一下"}{#if n >= 5}<Flame aria-hidden="true" class="ml-1 inline size-4 text-coral" />{/if}</span>
-				</div>
-				{#if m.data.note}<div class={cn("ml-22 rounded-xl px-3 py-1.5 wrap-anywhere", m.data.who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>{m.data.note}</div>{/if}
-			</div>
-		{/each}
+		<h3 id="miss-history-title" class="text-sm font-semibold">想你记录</h3>
+		{#if rows.length}
+			<ScrollArea type="auto" viewportProps={{ tabindex: 0, role: "region", "aria-labelledby": "miss-history-title", class: "h-auto max-h-56" }}>
+				<ul class="divide-y pr-3">
+					{#each rows as m (m.id)}
+						{@const n = nOf(m.data.n)}
+						<li class="grid grid-cols-[5rem_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 py-2 text-sm">
+							<span class="font-mono text-xs text-muted-foreground">{fmtTime(m.data.c, keyOf(new Date(m.data.c)) !== today)}</span>
+							<span class={cn("font-semibold", m.data.who === "yi" ? "text-yi" : "text-jq")}>{WHO[m.data.who]}</span>
+							<span>{n > 1 ? `一口气想了你 ${n} 次` : "想了你一下"}{#if n >= 5}<Flame aria-hidden="true" class="ml-1 inline size-4 text-coral" />{/if}</span>
+							{#if m.data.note}<span class={cn("col-span-2 col-start-2 rounded-xl px-3 py-1.5 wrap-anywhere", m.data.who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>{m.data.note}</span>{/if}
+						</li>
+					{/each}
+				</ul>
+			</ScrollArea>
+		{:else}
+			<p class="text-sm text-muted-foreground">还没有记录，点一下大爱心试试。</p>
+		{/if}
 	</div>
 </PlayCard>

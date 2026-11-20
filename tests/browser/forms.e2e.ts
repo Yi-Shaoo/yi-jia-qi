@@ -104,6 +104,21 @@ test("保存中修改的草稿不被成功清空或被旧错误标记，也不�
 	expect((await app.docs("about")).map((d) => d.data.t)).toEqual(["海獭"]);
 });
 
+test("偏好卡按内容定高，两人的输入框不被条目数量挤错位", async ({ page, app }) => {
+	for (let i = 0; i < 5; i++) await app.put("about", `food-${i}`, { cat: "food", who: "yi", t: `第 ${i + 1} 道最喜欢的海鲜料理`, c: i });
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto("/about");
+	const animal = page.getByRole("region", { name: "喜欢的动物" });
+	const food = page.getByRole("region", { name: "爱吃的东西" });
+	await expect(food.getByRole("listitem")).toHaveCount(5);
+	const [short, tall, yi, jq] = await Promise.all([animal.boundingBox(), food.boundingBox(), food.getByRole("textbox", { name: "Yi的爱吃的东西", exact: true }).boundingBox(), food.getByRole("textbox", { name: "Jia Qi的爱吃的东西", exact: true }).boundingBox()]);
+	expect(short!.y).toBe(tall!.y);
+	expect(short!.height).toBeLessThan(tall!.height);
+	expect(yi!.y).toBe(jq!.y);
+	await page.setViewportSize({ width: 320, height: 800 });
+	expect(await food.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+});
+
 test("新建分类对齐卡片，重复可纠正，失败可重试，不覆盖稍后输入", async ({ page, app }) => {
 	await page.goto("/about");
 	const input = page.getByLabel("分类名"), submit = page.getByRole("button", { name: "新建分类" });
@@ -150,6 +165,8 @@ test("新建分类对齐卡片，重复可纠正，失败可重试，不覆盖�
 test("新心愿在窄屏可见；失败保留原文，添加者变更不改想要人", async ({ page, app }) => {
 	await page.goto("/wish");
 	const text = page.getByLabel("新心愿"), submit = page.getByRole("button", { name: "添加心愿", exact: true });
+	const group = page.locator('[data-slot="input-group"]').filter({ has: text });
+	await expect(group.getByRole("button", { name: "添加心愿" })).toBeDisabled();
 	const name = "一起去海边散步".repeat(10);
 	await text.fill(name);
 	await expect(submit).toBeEnabled();
@@ -253,6 +270,18 @@ test("减少动画时糯糯留在原处，也能正常投喂", async ({ page, ap
 	await page.clock.fastForward(5000);
 	expect(await position()).toBe(start);
 	expect((await app.docs("pet"))[0].data.feeds).toBe(1);
+});
+
+test("想你记录可在列表内滚动到较早的留言", async ({ page, app }) => {
+	for (let i = 0; i < 12; i++) await app.put("miss", `note-${i}`, { c: Date.now() + i * 60000, who: "yi", n: 1, note: `留言 ${i}` });
+	await page.goto("/play#miss");
+	const history = page.getByRole("region", { name: "想你记录" });
+	await expect(history.getByRole("listitem")).toHaveCount(12);
+	await expect(history.getByRole("listitem").first()).toContainText("留言 11");
+	await history.focus();
+	await page.keyboard.press("End");
+	await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+	await expect(history.getByRole("listitem").last()).toBeInViewport();
 });
 
 test("另一账号加心愿时，当前节日卡通过实时同步更新", async ({ browser, page, site, app }) => {

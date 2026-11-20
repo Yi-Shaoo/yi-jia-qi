@@ -6,7 +6,7 @@
 
 	type Props = WithElementRef<
 		Omit<HTMLInputAttributes, "type"> &
-			({ type: "file"; files?: FileList | null } | { type?: InputType; files?: undefined })
+			({ type: "file"; files?: FileList | null; value?: never } | { type?: InputType; files?: undefined })
 	>;
 
 	let {
@@ -30,7 +30,6 @@
 		)}
 		type="file"
 		bind:files
-		bind:value
 		{...restProps}
 	/>
 {:else}
