@@ -297,8 +297,8 @@
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">Road-trip</span>
 			<span class="text-[13px] opacity-85">Big Sur、Joshua Tree、Solvang…</span>
 		</a>
-		<a href="/holiday" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-night p-5 text-night-ink md:min-h-[170px]">
-			<span class="font-mono text-xs tracking-[0.06em] text-[#ffb27a]">11.26 · 12.25</span>
+		<a href="/holiday" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-mint-soft p-5 text-mint-ink md:min-h-[170px]">
+			<span class="font-mono text-xs tracking-[0.06em]">11.26 · 12.25</span>
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">感恩节和圣诞</span>
 			<span class="text-[13px] opacity-85">瑞士冬日村、游船灯会</span>
 		</a>

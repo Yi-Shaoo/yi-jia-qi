@@ -39,8 +39,8 @@
 	--sun: #e8833a;
 	--sand: #f6ead2;
 	--sand-ink: #5e4310;
-	--night: #14253d;
-	--night-ink: #f3efe6;
+	--mint-soft: #d9f1e5;
+	--mint-ink: #2c5744;
 	--stamp: #ff9a4a;
 	--yi: #af3c31;
 	--yi-soft: #fde8e2;
@@ -90,8 +90,8 @@
 	--sun: #ffa25c;
 	--sand: #2e2717;
 	--sand-ink: #f3dca8;
-	--night: #1b2d45;
-	--night-ink: #eef4fc;
+	--mint-soft: #273e35;
+	--mint-ink: #b9e4cc;
 	--stamp: #ffa45c;
 	--yi: #ff8f7d;
 	--yi-soft: #3a2030;
@@ -151,8 +151,8 @@
 	--color-sun: var(--sun);
 	--color-sand: var(--sand);
 	--color-sand-ink: var(--sand-ink);
-	--color-night: var(--night);
-	--color-night-ink: var(--night-ink);
+	--color-mint-soft: var(--mint-soft);
+	--color-mint-ink: var(--mint-ink);
 	--color-stamp: var(--stamp);
 	--color-yi: var(--yi);
 	--color-yi-soft: var(--yi-soft);

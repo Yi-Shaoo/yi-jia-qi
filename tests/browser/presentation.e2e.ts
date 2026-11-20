@@ -1,5 +1,23 @@
 import { test, expect } from "./fixture";
 
+test("节日卡使用薄荷色，日期在两种外观下均随卡片文字配色", async ({ page, app }) => {
+	await app.docs("meta");
+	await page.goto("/");
+	const card = page.getByRole("link", { name: /11\.26.*感恩节和圣诞/ });
+	for (const theme of ["light", "dark"] as const) {
+		await page.emulateMedia({ colorScheme: theme });
+		await expect.poll(() => page.locator("html").evaluate(el => el.classList.contains("dark"))).toBe(theme === "dark");
+		const { color, backgroundColor } = await card.evaluate(el => {
+			const { color, backgroundColor } = getComputedStyle(el);
+			return { color, backgroundColor };
+		});
+		const [r, g, b] = backgroundColor.match(/\d+/g)!.map(Number);
+		expect(g).toBeGreaterThan(Math.max(r, b));
+		if (theme === "light") expect(Math.min(r, g, b)).toBeGreaterThan(200);
+		await expect(card.getByText("11.26 · 12.25")).toHaveCSS("color", color);
+	}
+});
+
 test("外观默认跟随系统，手动覆盖可持久化并能恢复自动", async ({ page, app }) => {
 	await app.docs("meta");
 	await page.emulateMedia({ colorScheme: "dark" });
