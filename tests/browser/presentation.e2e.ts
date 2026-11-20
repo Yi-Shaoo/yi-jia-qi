@@ -118,3 +118,28 @@ test("缩略图不放大小图；日期区分原戳、上传时间与无日期",
 	await note.click();
 	await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
 });
+
+test("两扇窗：明信片长文字恰好露 4 行不露半行，每日一问是可聚焦的淡粉纸质甜点券", async ({ page, app }) => {
+	await page.clock.setFixedTime(new Date("2026-11-19T12:00:00"));
+	const long = Array.from({ length: 8 }, (_, i) => `第 ${i + 1} 行：今天考完试去吃了泰国菜，被说成韩国菜。`).join("\n");
+	await app.put("diary", "today", { date: "2026-11-19", kind: "apart", title: "", c: 1, yi: { t: long, fav: "", photo: "" }, jq: { t: "", fav: "", photo: "" } });
+	await app.put("daily", "2026-11-19", { q: "如果有一天假期，你想怎么和我过？", yi: { t: "去海边", at: 1 } });
+	await page.goto("/");
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "同一天，两扇窗" }) });
+		await expect(section.getByRole("heading", { name: "Yi", level: 3 })).toBeVisible();
+		await expect(section.getByText("Jia Qi 今天还没写")).toBeVisible();
+		const text = section.locator("p").filter({ hasText: "第 1 行" });
+		const box = await text.evaluate((el) => ({ height: el.getBoundingClientRect().height, line: parseFloat(getComputedStyle(el).lineHeight), cut: el.scrollHeight > el.clientHeight }));
+		expect(box.cut).toBe(true);
+		expect(box.height).toBeCloseTo(box.line * 4, 0);
+		const ticket = section.getByRole("link", { name: /如果有一天假期/ });
+		await expect(ticket).toContainText("Yi 已回答");
+		await expect(ticket).toContainText("Jia Qi 还没答");
+		expect(await ticket.evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/svg.*linear-gradient/s);
+		await ticket.focus();
+		expect(await ticket.evaluate((el) => getComputedStyle(el, "::before").borderTopStyle)).toBe("solid");
+		await ticket.blur();
+	}
+});

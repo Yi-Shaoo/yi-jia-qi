@@ -4,7 +4,6 @@
 	import * as Popover from "$lib/components/ui/popover";
 	import { Input } from "$lib/components/ui/input";
 	import Polaroid from "$lib/components/Polaroid.svelte";
-	import WhoBadge from "$lib/components/WhoBadge.svelte";
 	import { todayDiaryAction } from "$lib/components/diary/drafts";
 	import { fileUrl } from "$lib/api";
 	import { useCollection } from "$lib/sync.svelte";
@@ -33,6 +32,8 @@
 	import PenLine from "@lucide/svelte/icons/pen-line";
 	import Shuffle from "@lucide/svelte/icons/shuffle";
 	import ArrowRight from "@lucide/svelte/icons/arrow-right";
+	import Heart from "@lucide/svelte/icons/heart";
+	import Sparkle from "@lucide/svelte/icons/sparkle";
 
 	const meta = useCollection("meta");
 	const diary = useCollection("diary");
@@ -214,32 +215,40 @@
 		</div>
 		<a href="/diary" class="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-sea">去日记 →</a>
 	</div>
-	<div class="grid gap-4 md:grid-cols-[1fr_1fr_1.1fr]">
+	<div class="today-grid">
 		{#if diary.status !== "ready"}<CollectionNotice status={diary.status} retry={() => diary.load()} label="今日日记" />{/if}
 		{#each (diary.ready ? [me, otherOf(me)] : []) as w (w)}
 			{@const text = sideText(w)}
-			<div class="surface-card flex min-h-[200px] flex-col gap-3 p-5">
-				<div class="flex items-center gap-2.5 font-semibold"><WhoBadge who={w} />{WHO[w]} 的今天</div>
+			<article class="today-card" data-who={w}>
+				<div class="today-head">
+					<div class="min-w-0">
+						<h3 class="today-sig">{WHO[w]}</h3>
+						<small>的今天 · {fmtShort(today)}</small>
+					</div>
+					<span class="today-stamp" aria-hidden="true">
+						{#if w === "yi"}<Heart />{:else}<Sparkle />{/if}
+					</span>
+				</div>
 				{#if text}
-					<p class="line-clamp-4 flex-1 text-[15px] leading-relaxed whitespace-pre-line">{text}</p>
+					<p class="today-text">{text}</p>
 				{:else}
-					<div class="flex flex-1 items-center justify-center rounded-xl bg-muted/60 text-sm text-muted-foreground">
+					<div class="today-empty">
 						{w === me && diaryAction.draftKey ? "有本机文字草稿" : `${WHO[w]} 今天还没写`}
 					</div>
 				{/if}
 				{#if w === me && text && diaryAction.draftKey}
-					<span class="text-xs text-muted-foreground">有本机文字草稿</span>
+					<span class="today-draft">有本机文字草稿</span>
 				{/if}
-			</div>
+			</article>
 		{/each}
 		{#if daily.status !== "ready"}<CollectionNotice status={daily.status} retry={() => daily.load()} label="每日一问" />{/if}
 		{#if daily.ready || dq}
-			<a href="/play#daily" class="flex min-w-0 flex-col gap-3 rounded-xl bg-sea p-6 text-white transition-transform hover:-translate-y-0.5 dark:bg-[#183447] dark:text-[#e1eff9]">
-				<span class="font-mono text-xs tracking-[0.08em] text-[#ffcf9e] uppercase">每日一问</span>
-				<span class="font-display text-[22px] leading-snug font-bold wrap-anywhere md:text-[26px]">{question}</span>
-				<span class="mt-auto flex flex-wrap gap-2 text-[13px]">
+			<a href="/play#daily" class="today-ticket">
+				<span class="today-label">每日一问 · 今日甜点券</span>
+				<span class="today-question">{question}</span>
+				<span class="today-chips">
 					{#each ["yi", "jq"] as const as w (w)}
-						<span class="rounded-full bg-white/15 px-3 py-1">{WHO[w]} {dq?.[w]?.t ? "已回答" : "还没答"}</span>
+						<span class="today-chip" class:answered={!!dq?.[w]?.t}><i aria-hidden="true"></i>{WHO[w]} {dq?.[w]?.t ? "已回答" : "还没答"}</span>
 					{/each}
 				</span>
 			</a>
@@ -324,6 +333,225 @@
 </p>
 
 <style>
+	/* 同一天，两扇窗：日记页同款明信片 + 淡粉纸质的每日一问甜点券 */
+	.today-grid {
+		--rose: #ffb4c8;
+		--rose-note: #ffe3ea;
+		--rose-ink: #a13960;
+		--yi-sign: #bf4c75;
+		--sky: #a9e1ef;
+		--blue-note: #dcefff;
+		--blue-ink: #2c6791;
+		--jq-sign: #33769f;
+		--paper: #fffdf9;
+		--edge: #edd9c9;
+		--rule: #f4e8df;
+		--quiet: #70594f;
+		--ink: #3d2a22;
+		--shadow: rgb(131 74 51 / 10%);
+		--ticket: #fff1f4;
+		--ticket-deep: #fbe2e9;
+		--ticket-ink: #9b3d5c;
+		--ticket-line: rgb(191 76 117 / 26%);
+		--ticket-chip: rgb(255 255 255 / 80%);
+		--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .22 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		display: grid;
+		gap: 16px;
+		min-width: 0;
+		color: var(--ink);
+	}
+	:global(.dark) .today-grid {
+		--rose: #ad637d;
+		--rose-note: #4a2c3a;
+		--rose-ink: #ffb4ca;
+		--yi-sign: #ffb4ca;
+		--sky: #628d9f;
+		--blue-note: #263c4d;
+		--blue-ink: #a8d9f5;
+		--jq-sign: #a8d9f5;
+		--paper: #302a30;
+		--edge: #51404a;
+		--rule: #453941;
+		--quiet: #d6bdb2;
+		--ink: #f6e9e2;
+		--shadow: rgb(0 0 0 / 22%);
+		--ticket: #47303b;
+		--ticket-deep: #3b2631;
+		--ticket-ink: #ffc6d6;
+		--ticket-line: rgb(255 180 202 / 24%);
+		--ticket-chip: rgb(255 255 255 / 8%);
+	}
+	.today-card {
+		--trim: var(--rose);
+		--sign: var(--yi-sign);
+		--note: var(--rose-note);
+		--accent: var(--rose-ink);
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-width: 0;
+		padding: 16px 18px 18px;
+		border: 1px solid var(--edge);
+		border-top: 4px solid var(--trim);
+		border-radius: 6px 7px 9px 7px;
+		background: repeating-linear-gradient(to bottom, transparent 0 27px, var(--rule) 27px 28px) 0 9px / 100% 28px, var(--paper);
+		box-shadow: 0 2px 0 var(--edge), 0 6px 14px var(--shadow);
+	}
+	.today-card[data-who="jq"] {
+		--trim: var(--sky);
+		--sign: var(--jq-sign);
+		--note: var(--blue-note);
+		--accent: var(--blue-ink);
+	}
+	.today-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.today-head small {
+		display: block;
+		color: var(--quiet);
+		font-size: 12px;
+	}
+	.today-sig {
+		margin: 0;
+		color: var(--sign);
+		font: 400 1.45rem/1.3 Pacifico, "Brush Script MT", cursive;
+		letter-spacing: 0;
+	}
+	.today-stamp {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 42px;
+		color: var(--paper);
+		background: radial-gradient(var(--paper) 1px, transparent 1.3px) 0 0 / 6px 6px, var(--trim);
+		mask: linear-gradient(#000 0 0) center / calc(100% - 5px) calc(100% - 5px) no-repeat,
+			radial-gradient(circle, #000 2.8px, transparent 3px) center / 6px 6px;
+	}
+	.today-stamp :global(svg) {
+		width: 16px;
+		height: 16px;
+		fill: currentColor;
+		stroke-width: 1.5;
+	}
+	.today-text {
+		margin: 0;
+		font-size: 15px;
+		line-height: 28px;
+		white-space: pre-line;
+		overflow-wrap: anywhere;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 4;
+		line-clamp: 4;
+		overflow: hidden;
+	}
+	.today-empty {
+		flex: 1;
+		display: grid;
+		place-items: center;
+		min-height: 84px;
+		padding: 12px;
+		border: 1.5px dashed var(--trim);
+		border-radius: 14px;
+		background: var(--note);
+		color: var(--accent);
+		font-size: 14px;
+		text-align: center;
+	}
+	.today-draft {
+		margin-top: auto;
+		color: var(--quiet);
+		font-size: 12px;
+	}
+	.today-ticket {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+		min-height: 150px;
+		padding: 20px 22px;
+		border-radius: 16px;
+		background: var(--grain) 0 0 / 180px, linear-gradient(160deg, var(--ticket), var(--ticket-deep));
+		color: var(--ticket-ink);
+		mask: radial-gradient(circle 9px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+			radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+		transition: transform 0.2s;
+	}
+	.today-ticket::before {
+		content: "";
+		position: absolute;
+		inset: 7px;
+		border: 1.5px dashed var(--ticket-line);
+		border-radius: 11px;
+		pointer-events: none;
+	}
+	.today-ticket:hover {
+		transform: translateY(-2px);
+	}
+	/* 缺口用的遮罩会裁掉外侧 outline，所以把焦点环画在券面内侧 */
+	.today-ticket:focus-visible {
+		outline: none;
+	}
+	.today-ticket:focus-visible::before {
+		border: 2.5px solid currentColor;
+	}
+	.today-label {
+		font: 600 11px/1.6 var(--font-mono, monospace);
+		letter-spacing: 0.1em;
+	}
+	.today-question {
+		font-family: var(--font-display, inherit);
+		font-size: 22px;
+		line-height: 1.4;
+		font-weight: 700;
+		overflow-wrap: anywhere;
+	}
+	.today-chips {
+		margin-top: auto;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		font-size: 13px;
+	}
+	.today-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		border-radius: 99px;
+		padding: 3px 11px;
+		background: var(--ticket-chip);
+	}
+	.today-chip i {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: currentColor;
+		opacity: 0.35;
+	}
+	.today-chip.answered i {
+		opacity: 1;
+	}
+	@media (min-width: 48rem) {
+		.today-grid {
+			grid-template-columns: 1fr 1fr 1.1fr;
+		}
+		.today-card {
+			min-height: 200px;
+		}
+		.today-question {
+			font-size: 24px;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.today-ticket {
+			transition: none;
+		}
+	}
 	/* 倒计时：四块独立的奶油色磨砂玻璃，压在照片底边时透出模糊的照片 */
 	.countdown-tile {
 		display: flex;
