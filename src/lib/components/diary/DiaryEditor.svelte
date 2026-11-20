@@ -3,6 +3,7 @@
 	import { toast } from "svelte-sonner";
 	import * as Dialog from "$lib/components/ui/dialog";
 	import { Button } from "$lib/components/ui/button";
+	import { DatePicker } from "$lib/components/ui/date-picker";
 	import { Input } from "$lib/components/ui/input";
 	import { RadioChoice } from "$lib/components/ui/radio-choice";
 	import { Label } from "$lib/components/ui/label";
@@ -141,6 +142,11 @@
 		uploadedId = "";
 	}
 
+	function clearValidation() {
+		invalid = null;
+		err = "";
+	}
+
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		if (busy || !diary.ready || missing) return;
@@ -207,7 +213,7 @@
 			{#if item}<Dialog.Description>{WHO[other]} 的这一边{sideHasContent(live?.data[other]) ? "已发布" : "还没写"}</Dialog.Description>{/if}
 		</Dialog.Header>
 
-		<form id="diary-publish" novalidate onsubmit={submit} oninput={() => { invalid = null; err = ""; }} class="grid min-h-0 min-w-0 content-start gap-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
+		<form id="diary-publish" novalidate onsubmit={submit} oninput={clearValidation} class="grid min-h-0 min-w-0 content-start gap-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
 			{#if restored}
 				<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-sand px-3 py-2 text-sm text-sand-ink">
 					<span role="status">已恢复文字草稿{savedAt ? ` · ${fmtTime(savedAt)}` : ""}</span>
@@ -222,7 +228,8 @@
 				<div class="grid min-w-0 gap-4 sm:grid-cols-[10rem_minmax(0,1fr)] md:grid-cols-1">
 					<div class="grid min-w-0 gap-1.5">
 						<Label for="dy-date">日期</Label>
-						<Input id="dy-date" type="date" bind:value={f.date} required aria-invalid={invalid === "date"} aria-describedby={invalid === "date" ? "dy-date-error" : undefined} />
+						<DatePicker id="dy-date" bind:value={f.date} disabled={!!busy} aria-invalid={invalid === "date"}
+							aria-describedby={invalid === "date" ? "dy-date-error" : undefined} onValueChange={clearValidation} />
 						{#if invalid === "date"}<span id="dy-date-error" role="alert" class="text-xs text-destructive">请选择日记日期。</span>{/if}
 					</div>
 					<fieldset class="min-w-0">

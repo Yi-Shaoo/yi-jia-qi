@@ -50,7 +50,6 @@ export async function saveMemoryDraft(
 		title: before?.title === draft.title ? before.title : draft.title.trim().slice(0, 40),
 		text: before?.text === draft.text ? before.text : draft.text.trim().slice(0, 600),
 		photos: draft.photos.flatMap((p) => (p.asset ? [p.asset] : [])),
-		dlabel: before?.date === draft.date ? (before.dlabel ?? "") : "",
 	};
 	const original = before?.photos ?? [];
 	const changed = !before || before.title !== data.title || before.date !== data.date || (before.text ?? "") !== data.text ||

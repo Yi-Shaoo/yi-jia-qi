@@ -100,7 +100,7 @@ test("其他标签页存下的草稿即时更新；隔天切回不会误开昨�
 	await page.evaluate(() => window.dispatchEvent(new Event("focus")));
 	await write.click();
 	const editor = page.getByRole("dialog");
-	await expect(editor.getByLabel("日期", { exact: true })).toHaveValue("2026-11-11");
+	await expect(editor.getByLabel("日期", { exact: true })).toHaveText("2026-11-11");
 	await expect(editor.getByLabel("正文", { exact: true })).toHaveValue("");
 	await page.keyboard.press("Escape");
 	await page.getByRole("region", { name: "本机文字草稿" }).getByRole("button", { name: "继续写" }).click();

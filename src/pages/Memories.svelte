@@ -11,6 +11,7 @@
 	import Lightbox from "$lib/components/Lightbox.svelte";
 	import ConfirmButton from "$lib/components/ConfirmButton.svelte";
 	import { Button } from "$lib/components/ui/button";
+	import { DatePicker } from "$lib/components/ui/date-picker";
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -121,7 +122,11 @@
 	async function save(e: SubmitEvent) {
 		e.preventDefault();
 		if (!draft || busy || onlyRejected) return;
-		if (!isMemoryDate(draft.date)) return (message = "选一下日期");
+		if (!isMemoryDate(draft.date)) {
+			message = "选一下日期";
+			document.getElementById("m-date")?.focus();
+			return;
+		}
 		if (!draft.title.trim()) return (message = "写一个标题");
 		busy = true;
 		message = "正在保存回忆…";
@@ -160,6 +165,11 @@
 {#snippet addMemory()}
 	<Button class="rounded-full" onclick={() => openEditor(null)}><Plus />添加一段回忆</Button>
 {/snippet}
+
+{#snippet dateLabel(date: string)}
+	<time datetime={date} class="font-mono text-xs text-muted-foreground [word-spacing:-0.5ch]">{fmtDots(date)}</time>
+{/snippet}
+
 <PageHeader title="我们的回忆" actions={empty ? undefined : addMemory} />
 
 <CollectionNotice status={memories.status} retry={() => memories.load()} />
@@ -173,7 +183,7 @@
 				<span aria-hidden="true" class={["absolute top-1.5 -left-[25px] size-3 rounded-full ring-4 ring-background md:-left-[35px] md:size-3.5", ["bg-coral", "bg-primary", "bg-sun"][index % 3]]}></span>
 				<article class={m.data.photos?.length ? "grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-8" : "max-w-prose"}>
 				<div class="min-w-0">
-				<time datetime={m.data.date} class="font-mono text-xs text-muted-foreground">{m.data.dlabel || fmtDots(m.data.date)}</time>
+				{@render dateLabel(m.data.date)}
 				<div class="mt-1 flex items-start gap-2">
 					<h2 id={`memory-${m.id}`} tabindex="-1" class="min-w-0 self-center rounded-sm text-2xl font-bold text-balance wrap-anywhere focus:outline-2 focus:outline-offset-4 focus:outline-sea">{m.data.title}</h2>
 					<Button variant="ghost" size="icon" class="text-muted-foreground" title="编辑回忆" aria-label={`编辑回忆：${m.data.title}`} onclick={() => openEditor(m)}><Pencil aria-hidden="true" /></Button>
@@ -185,8 +195,8 @@
 						{#each m.data.photos as p, i}
 							{@const name = photoName(m.data.title, i)}
 							<Polaroid liftLandscape id={`memory-photo-${m.id}-${i}`} src={fileUrl(p)} alt={name} aria-label={`查看${name}`}
-								stamp={i === 0 && !m.data.dlabel ? filmStamp(m.data.date) : ""} tilt={[-2, 1.5, -1, 2][i % 4]}
-								imgClass="h-auto" class="p-2 pb-3"
+								stamp={i === 0 ? filmStamp(m.data.date) : ""} tilt={[-2, 1.5, -1, 2][i % 4]}
+								imgClass="h-auto" class="p-2"
 								onclick={() => { lb = { id: m.id, photo: p, index: i }; lbOpen = true; }} />
 						{/each}
 					</div>
@@ -203,7 +213,7 @@
 			</div>
 			<ul class="mt-2 grid gap-1.5">
 				{#each plans as plan (plan.date)}
-					<li class="flex flex-wrap items-baseline gap-x-3"><time datetime={plan.date} class="font-mono text-xs text-muted-foreground">{fmtDots(plan.date)}</time>第一个{plan.title}</li>
+					<li class="flex flex-wrap items-baseline gap-x-3">{@render dateLabel(plan.date)}第一个{plan.title}</li>
 				{/each}
 			</ul>
 		</section>
@@ -226,7 +236,7 @@
 				<li class="grid gap-1 py-3 wrap-anywhere">
 					<h3 id={`memory-${m.id}`} tabindex="-1" class="font-semibold">{title}</h3>
 					<p class="text-sm text-muted-foreground">
-						{#if isMemoryDate(m.data.date)}<time datetime={m.data.date}>{m.data.dlabel || fmtDots(m.data.date)}</time> · 缺少标题
+						{#if isMemoryDate(m.data.date)}{@render dateLabel(m.data.date)} · 缺少标题
 						{:else}{m.data.date ? `日期无效：${m.data.date}` : "缺少日期"}{memoryTitle(m.data.title) ? "" : " · 缺少标题"}{/if}
 					</p>
 					{#if m.data.text}<p class="line-clamp-2 text-sm">{m.data.text}</p>{/if}
@@ -265,7 +275,7 @@
 			</Dialog.Header>
 			<form onsubmit={save} oninput={() => (message = "")} class="flex flex-col gap-4">
 				<div class="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
-					<div class="grid gap-1.5"><Label for="m-date">日期</Label><Input id="m-date" type="date" bind:value={draft.date} required disabled={busy} /></div>
+					<div class="grid gap-1.5"><Label for="m-date">日期</Label><DatePicker id="m-date" bind:value={draft.date} disabled={busy} onValueChange={() => (message = "")} /></div>
 					<div class="grid gap-1.5"><Label for="m-title">标题</Label><Input id="m-title" bind:value={draft.title} maxlength={40} required disabled={busy} /></div>
 				</div>
 				<div class="grid gap-1.5">

@@ -131,7 +131,7 @@ describe("回忆批处理", () => {
 	});
 
 	test("编辑失败不删除原图；保存后才清理已移除的原图", async () => {
-		const saved = record("memory", { c: 1, date: "2026-01-01", title: "标题", text: "正文", photos: ["keep", "old"], dlabel: "元旦" });
+		const saved = record("memory", { c: 1, date: "2026-01-01", title: "标题", text: "正文", photos: ["keep", "old"] });
 		const draft = createMemoryDraft(saved);
 		draft.photos.splice(1, 1, selection("new"));
 		expect(draft.saved?.photos).toEqual(["keep", "old"]);
@@ -152,6 +152,6 @@ describe("回忆批处理", () => {
 		await saveMemoryDraft(draft, memory, noop, options);
 		expect(uploads).toBe(1);
 		expect(deleted).toEqual(["old"]);
-		expect(draft.saved).toMatchObject({ photos: ["keep", "new"], dlabel: "元旦" });
+		expect(draft.saved).toEqual({ ...saved.data, photos: ["keep", "new"] });
 	});
 });

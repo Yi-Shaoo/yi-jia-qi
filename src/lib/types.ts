@@ -66,7 +66,6 @@ export interface Memory {
 	title: string;
 	text: string;
 	photos: string[];
-	dlabel?: string;
 	c: number;
 }
 

@@ -4,7 +4,7 @@
 	import * as Popover from "$lib/components/ui/popover";
 	import { Input } from "$lib/components/ui/input";
 	import PaperCard from "$lib/components/diary/PaperCard.svelte";
-	import { Label } from "$lib/components/ui/label";
+	import { DatePickerCalendar } from "$lib/components/ui/date-picker";
 	import EmptyState from "$lib/components/EmptyState.svelte";
 	import Polaroid from "$lib/components/Polaroid.svelte";
 	import { todayDiaryAction } from "$lib/components/diary/drafts";
@@ -201,10 +201,9 @@
 				<Popover.Trigger disabled={!meta.ready} class="inline-flex min-h-11 items-center rounded-sm font-medium text-primary underline decoration-primary/45 underline-offset-4 hover:decoration-primary">
 					{shared.next ? `${fmtShort(shared.next)} ${weekday(shared.next)}` : "选个日期"}
 				</Popover.Trigger>
-				<Popover.Content class="flex w-64 flex-col gap-3">
-					<Label for="next-date">下次见面是哪天？</Label>
-					<Input id="next-date" type="date" min={today} bind:value={nextValue} disabled={savingNext} />
-					<div class="flex justify-end gap-2">
+				<Popover.Content class="w-auto gap-0 p-0" role="dialog" aria-label="下次见面日期">
+					<DatePickerCalendar min={today} bind:value={nextValue} disabled={savingNext} />
+					<div class="flex justify-end gap-2 border-t p-3">
 						{#if shared.next}<Button variant="ghost" size="sm" onclick={() => saveNext("")} disabled={savingNext}>清空</Button>{/if}
 						<Button size="sm" onclick={() => saveNext(nextValue)} disabled={savingNext || !isDateKey(nextValue) || nextValue < today}>保存</Button>
 					</div>

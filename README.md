@@ -77,7 +77,7 @@ bunx shadcn-svelte@latest add <组件名> --yes   # 再加 shadcn 组件
 
 首次运行先执行 `bunx playwright install chromium`，再运行 `bun run test:ui`。已有 Chrome 也可用环境变量 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定其可执行文件。测试构建真实前端，每个用例使用本机回环地址、独立临时 SQLite、测试照片和随机密码；不会读写 `./data/`。覆盖桌面和窄屏、读写失败、删除确认、跨账号同步以及主要交互。
 
-可选的移动 WebKit 核查：执行 `bunx playwright install webkit`、`bun run build`、`bunx playwright test -c playwright.webkit.config.ts`。这些用例以 iPhone 13 浏览器参数测试日记编辑、回忆翻页、不同照片比例下的连续翻页、系统外观切换、小图日期、每日一问、长文收起定位和地区筛选直达心愿；不等同于 iPhone 真机、系统软键盘或 VoiceOver 验证。
+可选的移动 WebKit 核查：执行 `bunx playwright install webkit`、`bun run build`、`bunx playwright test -c playwright.webkit.config.ts`。这些用例以 iPhone 13 浏览器参数测试日期选择、日记编辑、回忆翻页、不同照片比例下的连续翻页、系统外观切换、小图日期、每日一问、长文收起定位和地区筛选直达心愿；不等同于 iPhone 真机、系统软键盘或 VoiceOver 验证。
 
 ## 持续集成
 

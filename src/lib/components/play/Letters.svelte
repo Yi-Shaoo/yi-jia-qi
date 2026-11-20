@@ -2,6 +2,7 @@
 	import { toast } from "svelte-sonner";
 	import { Card } from "$lib/components/ui/card";
 	import { Button } from "$lib/components/ui/button";
+	import { DatePicker } from "$lib/components/ui/date-picker";
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -53,6 +54,10 @@
 			}
 		}
 	}
+	function persistDraft() {
+		writeLocal(key, { title, t: text, date });
+	}
+
 	async function send(e: SubmitEvent) {
 		e.preventDefault();
 		const v = text.trim();
@@ -128,7 +133,7 @@
 	{@render group(toMe, false)}
 	{@render group(fromMe, true)}
 
-	<form onsubmit={send} oninput={() => writeLocal(key, { title, t: text, date })} class="flex flex-col gap-3 border-t pt-4">
+	<form onsubmit={send} oninput={persistDraft} class="flex flex-col gap-3 border-t pt-4">
 		<h3 class="text-sm font-semibold">写给 {partner}</h3>
 		<div class="grid gap-1.5">
 			<Label for="lt-title">标题（可选）</Label>
@@ -141,7 +146,7 @@
 		<div class="flex flex-wrap items-end gap-3">
 			<div class="grid gap-1.5">
 				<div class="flex items-baseline gap-2"><Label for="lt-date">可拆日期</Label><small id="lt-min" class="text-xs text-muted-foreground">明天起可选</small></div>
-				<Input id="lt-date" aria-describedby="lt-min" type="date" min={addDays(1)} bind:value={date} class="w-44" required disabled={sending} />
+				<DatePicker id="lt-date" aria-describedby="lt-min" min={addDays(1)} bind:value={date} class="w-44" disabled={sending} onValueChange={persistDraft} />
 			</div>
 			<Button type="submit" class="rounded-full" disabled={sending || !text.trim()}>{sending ? "寄出中…" : "寄出"}</Button>
 		</div>

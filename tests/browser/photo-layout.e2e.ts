@@ -8,7 +8,9 @@ test("回忆横图缩略图适量增高，竖图保留原比例", async ({ page,
 	await app.put("memories", "mixed", { c: 1, date: "2026-11-19", title: "横竖两张", photos: assets, text: "" });
 	await page.goto("/memories");
 	for (const [i, factor] of [1.2, 1].entries()) {
-		const img = page.locator(`#memory-photo-mixed-${i} img`);
+		const frame = page.locator(`#memory-photo-mixed-${i}`);
+		await expect(frame).toHaveCSS("padding", "8px");
+		const img = frame.locator("img");
 		await img.scrollIntoViewIfNeeded();
 		await expect.poll(() => img.evaluate((el: HTMLImageElement) => (el.clientHeight / el.clientWidth) / (el.naturalHeight / el.naturalWidth))).toBeCloseTo(factor, 1);
 	}
