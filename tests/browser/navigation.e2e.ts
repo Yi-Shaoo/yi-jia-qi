@@ -1,7 +1,7 @@
 import { test, expect } from "./fixture";
 
 const pages = [
-	["/", "Yi and Jia Qi"], ["/diary", "约会日记"], ["/memories", "我们的回忆"], ["/album", "情侣相册"],
+	["/", "Yi & Jia Qi"], ["/diary", "约会日记"], ["/memories", "我们的回忆"], ["/album", "情侣相册"],
 	["/about", "关于我们"], ["/play", "一起玩"], ["/wish", "心愿清单"], ["/dates", "约会去哪"],
 	["/food", "今天吃什么"], ["/roadtrip", "Road-trip 路线"], ["/holiday", "感恩节和圣诞"], ["/no-such-page", "这一页走丢了"],
 ];

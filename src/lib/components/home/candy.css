@@ -1,0 +1,111 @@
+/*
+ * 首页 · 草莓奶油糖果铺（C1）
+ * 只在首页生效：Home.svelte 挂载时给 <html> 加 .candy-home，离开首页时移除。
+ * 这里只放首页组件管不到的全局部分：配色变量、波点底、页头店招 + 遮阳棚、手机底栏。
+ */
+html.candy-home {
+	--background: #fff7f5;
+	--foreground: #4a2a33;
+	--card: #fffdfb;
+	--card-foreground: #4a2a33;
+	--popover: #fffdfb;
+	--popover-foreground: #4a2a33;
+	--primary: #b4416a;
+	--primary-foreground: #ffffff;
+	--secondary: #ffe3ec;
+	--secondary-foreground: #8e2f52;
+	--muted: #fdeeea;
+	--muted-foreground: #86646c;
+	--border: #f4d8d6;
+	--input: #efcdd0;
+	--ring: #b4416a;
+	--coral: #a8365f;
+	--coral-soft: #ffe3ec;
+	--sea: #b4416a;
+	--sea-soft: #ffe9f0;
+	--candy-dot-a: #ffd9e4;
+	--candy-dot-b: #ffe6d6;
+	--candy-shop: #fffdfb;
+	--candy-stripe: #ffb3c9;
+	--candy-line: #f6dcd9;
+	--candy-logo: #d4557f;
+	--candy-amp: #e9a33b;
+}
+html.candy-home.dark {
+	--background: #1f181d;
+	--foreground: #f7e8ec;
+	--card: #2b2228;
+	--card-foreground: #f7e8ec;
+	--popover: #2b2228;
+	--popover-foreground: #f7e8ec;
+	--primary: #ff9fbb;
+	--primary-foreground: #3a1424;
+	--secondary: #45293a;
+	--secondary-foreground: #ffc6d6;
+	--muted: #33282f;
+	--muted-foreground: #cfb3bb;
+	--border: #4a3a43;
+	--input: #574450;
+	--ring: #ff9fbb;
+	--coral: #ffa9c2;
+	--coral-soft: #45293a;
+	--sea: #ffb0c8;
+	--sea-soft: #45293a;
+	--candy-dot-a: #3a2a32;
+	--candy-dot-b: #372c27;
+	--candy-shop: #2b2228;
+	--candy-stripe: #8f4f67;
+	--candy-line: #3d2f37;
+	--candy-logo: #ff9fbb;
+	--candy-amp: #f2bf6a;
+}
+
+html.candy-home body {
+	background:
+		radial-gradient(circle, var(--candy-dot-a) 1.6px, transparent 2px) 0 0 / 34px 34px,
+		radial-gradient(circle, var(--candy-dot-b) 1.6px, transparent 2px) 17px 17px / 34px 34px,
+		var(--background);
+}
+
+/* 店招：奶油色页头，下沿挂一条粉白遮阳棚 */
+html.candy-home header {
+	background: var(--candy-shop);
+	backdrop-filter: none;
+	box-shadow: 0 1px 0 var(--candy-line);
+}
+html.candy-home header::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 100%;
+	height: 26px;
+	background: repeating-linear-gradient(90deg, var(--candy-stripe) 0 28px, var(--candy-shop) 28px 56px);
+	mask:
+		linear-gradient(#000 0 0) 0 0 / 100% 12px no-repeat,
+		radial-gradient(circle 14px at 14px 12px, #000 98%, transparent) 0 0 / 28px 26px repeat-x;
+	filter: drop-shadow(0 3px 2px rgb(212 85 127 / 12%));
+	pointer-events: none;
+}
+html.candy-home .site-logo {
+	font: 400 22px/1 Pacifico, "Brush Script MT", cursive;
+	letter-spacing: 0;
+	color: var(--candy-logo);
+}
+html.candy-home .site-logo span {
+	color: var(--candy-amp);
+}
+@media (min-width: 48rem) {
+	html.candy-home .site-logo {
+		font-size: 26px;
+	}
+}
+html.candy-home #main-content {
+	padding-top: 30px;
+}
+
+html.candy-home .tab-bar {
+	background: var(--candy-shop);
+	border-top: 2px solid color-mix(in srgb, var(--candy-stripe) 45%, transparent);
+	backdrop-filter: none;
+}

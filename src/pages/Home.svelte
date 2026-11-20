@@ -12,6 +12,7 @@
 	import WishButton from "$lib/components/WishButton.svelte";
 	import CollectionNotice from "$lib/components/CollectionNotice.svelte";
 	import { pick } from "$lib/fx";
+	import "$lib/components/home/candy.css";
 	import { questionFor } from "$lib/daily";
 	import { localDay } from "$lib/local-day";
 	import { groupMemories } from "$lib/memory-timeline";
@@ -81,6 +82,12 @@
 		}
 	}
 
+	// 草莓奶油糖果铺：只在首页给 <html> 挂上配色和店招（见 candy.css）
+	$effect(() => {
+		document.documentElement.classList.add("candy-home");
+		return () => document.documentElement.classList.remove("candy-home");
+	});
+
 	// —— 封面 ——
 	let heroInput: HTMLInputElement;
 	let heroBusy = $state(false);
@@ -146,7 +153,7 @@
 		</Button>
 	</div>
 	<div class="cover-signature">
-		<h1 class="cover-name">Yi <span class="cover-and">and</span> Jia Qi</h1>
+		<h1 class="cover-name">Yi <span class="cover-and">&amp;</span> Jia Qi</h1>
 		<p class="cover-caption">UCI ⇄ UCLA，405 号公路两头的我们</p>
 		<Button href="/diary?write=today" variant="secondary" class="cover-write rounded-full px-3 md:hidden"><PenLine />{diaryAction.label}</Button>
 	</div>
@@ -264,7 +271,7 @@
 	</div>
 	<CollectionNotice status={memories.status} retry={() => memories.load()} label="回忆" />
 	{#if recent.length}
-		<div class="-mx-4 flex snap-x gap-6 overflow-x-auto px-6 pt-2 pb-6 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-2">
+		<div class="memories-shelf -mx-4 flex snap-x gap-6 overflow-x-auto px-6 pt-7 pb-8 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-7">
 			{#each recent as entry, i (entry.id)}
 				{@const m = entry.data}
 				<a href={`/memories?item=${encodeURIComponent(entry.id)}`} class="w-[230px] min-w-0 shrink-0 snap-center self-start wrap-anywhere md:w-auto">
@@ -292,22 +299,22 @@
 <section class="pt-12">
 	<h2 class="mb-5 text-[28px] font-bold md:text-[34px]">出去玩</h2>
 	<div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-		<a href="/dates" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-sea-soft p-5 text-[#173f5a] dark:text-sea md:min-h-[170px]">
+		<a href="/dates" class="candy-box flex min-h-[150px] flex-col gap-1.5 p-5 md:min-h-[170px]">
 			<span class="font-mono text-xs tracking-[0.06em]">{DATES.length} 个推荐地点</span>
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">约会去哪</span>
 			<span class="text-[13px] opacity-85">Irvine / Westwood / 中间点</span>
 		</a>
-		<a href="/food" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-coral-soft p-5 text-[#7d2a1f] dark:text-coral md:min-h-[170px]">
+		<a href="/food" class="candy-box flex min-h-[150px] flex-col gap-1.5 p-5 md:min-h-[170px]">
 			<span class="font-mono text-xs tracking-[0.06em]">{FOOD.length} 家推荐餐厅</span>
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">今天吃什么</span>
 			<span class="text-[13px] opacity-85">拉面、烤肉、海边早午餐</span>
 		</a>
-		<a href="/roadtrip" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-sand p-5 text-sand-ink md:min-h-[170px]">
+		<a href="/roadtrip" class="candy-box flex min-h-[150px] flex-col gap-1.5 p-5 md:min-h-[170px]">
 			<span class="font-mono text-xs tracking-[0.06em]">{ROAD.length} 条路线</span>
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">Road-trip</span>
 			<span class="text-[13px] opacity-85">Big Sur、Joshua Tree、Solvang…</span>
 		</a>
-		<a href="/holiday" class="flex min-h-[150px] flex-col gap-1.5 rounded-xl bg-mint-soft p-5 text-mint-ink md:min-h-[170px]">
+		<a href="/holiday" class="candy-box flex min-h-[150px] flex-col gap-1.5 p-5 md:min-h-[170px]">
 			<span class="font-mono text-xs tracking-[0.06em]">11.26 · 12.25</span>
 			<span class="mt-auto font-display text-xl font-bold md:text-[22px]">感恩节和圣诞</span>
 			<span class="text-[13px] opacity-85">瑞士冬日村、游船灯会</span>
@@ -316,7 +323,7 @@
 </section>
 
 <!-- 灵感 -->
-<section class="surface-card mt-12 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+<section class="idea-note mt-12 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
 	<div class="min-w-0">
 		<span class="eyebrow">今天的灵感</span>
 		<h3 class="mt-2 text-xl font-bold">{idea.text}</h3>
@@ -552,39 +559,204 @@
 			transition: none;
 		}
 	}
-	/* 倒计时：四块独立的奶油色磨砂玻璃，压在照片底边时透出模糊的照片 */
+	/* 倒计时：四颗马卡龙（草莓、开心果、柠檬、蓝莓），右上角各一枚小马卡龙 */
 	.countdown-tile {
+		--tile: #ffe1ea;
+		--shell: #ff9fbb;
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 0.125rem;
 		padding: 1rem;
-		border-radius: 18px;
-		background: rgb(255 250 243 / 62%);
-		-webkit-backdrop-filter: blur(24px) saturate(150%);
-		backdrop-filter: blur(24px) saturate(150%);
+		border-radius: 22px;
+		background: var(--tile);
+		color: var(--foreground);
 		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 90%),
-			inset 0 0 0 1px rgb(255 255 255 / 55%),
-			0 0 0 1px rgb(120 90 60 / 7%),
-			0 10px 26px rgb(60 40 20 / 10%);
+			inset 0 -4px 0 rgb(0 0 0 / 5%),
+			0 0 0 2px var(--candy-shop, #fffdfb),
+			0 10px 22px rgb(150 70 90 / 12%);
 	}
-	.countdown-tile .text-muted-foreground {
-		color: rgb(38 52 70 / 88%);
+	.countdown-tile::after {
+		content: "";
+		position: absolute;
+		top: 14px;
+		right: 16px;
+		width: 26px;
+		height: 19px;
+		border-radius: 45%;
+		background: linear-gradient(var(--shell) 0 36%, var(--candy-shop, #fffdfb) 36% 64%, var(--shell) 64%);
+		box-shadow: 0 2px 0 rgb(0 0 0 / 6%);
+	}
+	.countdown-tile:nth-child(2) {
+		--tile: #e1f3da;
+		--shell: #a9dc9c;
+	}
+	.countdown-tile:nth-child(3) {
+		--tile: #fff2c4;
+		--shell: #ffd66b;
+	}
+	.countdown-tile:nth-child(4) {
+		--tile: #e2ebff;
+		--shell: #a9c1f5;
 	}
 	:global(.dark) .countdown-tile {
-		background: rgb(30 36 50 / 55%);
+		--tile: #4a2c3a;
+		--shell: #c4728f;
 		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 12%),
-			inset 0 0 0 1px rgb(255 255 255 / 7%),
-			0 10px 26px rgb(0 0 0 / 35%);
+			inset 0 -4px 0 rgb(0 0 0 / 12%),
+			0 0 0 2px var(--candy-shop, #2b2228),
+			0 10px 22px rgb(0 0 0 / 30%);
+	}
+	:global(.dark) .countdown-tile:nth-child(2) {
+		--tile: #2f4030;
+		--shell: #7fae76;
+	}
+	:global(.dark) .countdown-tile:nth-child(3) {
+		--tile: #4a4026;
+		--shell: #c9a54c;
+	}
+	:global(.dark) .countdown-tile:nth-child(4) {
+		--tile: #2c3652;
+		--shell: #7f97cf;
+	}
+	.countdown-tile :global(.font-display) {
+		font-family: Fredoka, var(--font-display);
+		font-weight: 700;
+	}
+	.countdown-tile .text-coral {
+		color: #d4557f;
+	}
+	:global(.dark) .countdown-tile .text-coral {
+		color: #ffa9c2;
+	}
+	.countdown-tile .text-muted-foreground {
+		color: #7b5960;
 	}
 	:global(.dark) .countdown-tile .text-muted-foreground {
-		color: rgb(222 230 242 / 78%);
+		color: #e6cdd4;
+	}
+	/* 四张的说明行等高、垂直居中；「下次见面」的日期按钮保留 44px 热区 */
+	.countdown-tile > span:last-child {
+		margin-top: auto;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		column-gap: 0.25em;
+		min-height: 44px;
 	}
 	@media (min-width: 48rem) {
 		.countdown-tile {
 			padding: 1.25rem 1.5rem;
 		}
+	}
+	/* 小标题下面一条粉色波浪线 */
+	h2 {
+		position: relative;
+		padding-bottom: 10px;
+	}
+	h2::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		width: 86px;
+		height: 8px;
+		background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='8'%3E%3Cpath d='M1 5q5-5 10 0t10 0' fill='none' stroke='%23ff9fbb' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x 0 0 / 22px 8px;
+	}
+	/* 回忆：拍立得铺在粉格子桌布上 */
+	.memories-shelf {
+		--gingham: rgb(255 168 196 / 28%);
+		background:
+			repeating-linear-gradient(0deg, var(--gingham) 0 18px, transparent 18px 36px),
+			repeating-linear-gradient(90deg, var(--gingham) 0 18px, transparent 18px 36px),
+			#fffaf8;
+		border-radius: 26px;
+		box-shadow: inset 0 0 0 2px #ffd3df;
+	}
+	:global(.dark) .memories-shelf {
+		--gingham: rgb(196 114 143 / 16%);
+		background:
+			repeating-linear-gradient(0deg, var(--gingham) 0 18px, transparent 18px 36px),
+			repeating-linear-gradient(90deg, var(--gingham) 0 18px, transparent 18px 36px),
+			#2b2228;
+		box-shadow: inset 0 0 0 2px #4a3a43;
+	}
+	.memories-shelf :global(.polaroid) {
+		box-shadow: 0 2px 3px rgb(90 40 50 / 12%), 0 14px 24px rgb(150 70 90 / 16%);
+	}
+	/* 出去玩：四只马卡龙色糖果盒，虚线盒边 */
+	.candy-box {
+		--box: #e2ebff;
+		--box-ink: #34508f;
+		position: relative;
+		border-radius: 22px;
+		background: var(--box);
+		color: var(--box-ink);
+		box-shadow: inset 0 -4px 0 rgb(0 0 0 / 5%), 0 8px 18px rgb(150 70 90 / 10%);
+	}
+	.candy-box::before {
+		content: "";
+		position: absolute;
+		inset: 7px;
+		border: 1.5px dashed rgb(255 255 255 / 85%);
+		border-radius: 16px;
+		pointer-events: none;
+	}
+	.candy-box:nth-child(2) {
+		--box: #ffe1ea;
+		--box-ink: #9c2f57;
+	}
+	.candy-box:nth-child(3) {
+		--box: #fff2c4;
+		--box-ink: #7a5a12;
+	}
+	.candy-box:nth-child(4) {
+		--box: #e1f3da;
+		--box-ink: #3d6b3a;
+	}
+	:global(.dark) .candy-box {
+		--box: #2c3652;
+		--box-ink: #c9d8ff;
+		box-shadow: inset 0 -4px 0 rgb(0 0 0 / 12%), 0 8px 18px rgb(0 0 0 / 25%);
+	}
+	:global(.dark) .candy-box::before {
+		border-color: rgb(255 255 255 / 16%);
+	}
+	:global(.dark) .candy-box:nth-child(2) {
+		--box: #4a2c3a;
+		--box-ink: #ffc6d6;
+	}
+	:global(.dark) .candy-box:nth-child(3) {
+		--box: #4a4026;
+		--box-ink: #f6dc94;
+	}
+	:global(.dark) .candy-box:nth-child(4) {
+		--box: #2f4030;
+		--box-ink: #c4e8ba;
+	}
+	/* 今天的灵感：签语饼小纸条 */
+	.idea-note {
+		position: relative;
+		border-radius: 24px;
+		background: var(--card);
+		box-shadow: 0 0 0 2px #ffd3df, 0 10px 22px rgb(150 70 90 / 8%);
+	}
+	.idea-note::before {
+		content: "";
+		position: absolute;
+		inset: 7px;
+		border: 1.5px dashed #ffc2d4;
+		border-radius: 18px;
+		pointer-events: none;
+	}
+	:global(.dark) .idea-note {
+		box-shadow: 0 0 0 2px #4a3a43, 0 10px 22px rgb(0 0 0 / 25%);
+	}
+	:global(.dark) .idea-note::before {
+		border-color: #6b4655;
+	}
+	.idea-note :global([data-slot="button"]) {
+		position: relative;
 	}
 	/* 封面：照片保持原色；桌面签名压在照片左下，只在那一角加一层很轻的暗角 */
 	.cover {
@@ -609,11 +781,34 @@
 		gap: 4px 8px;
 		padding: 8px 16px 15px;
 	}
+	/* 奶油花边相框：奶油白边 + 粉色外圈 + 内侧一圈白色缝线 */
+	.cover-photo {
+		margin: 0 12px;
+		border: 5px solid var(--candy-shop, #fffdfb);
+		border-radius: 22px;
+		outline: 2px dashed rgb(255 255 255 / 80%);
+		outline-offset: -14px;
+		box-shadow: 0 0 0 2px #ffc2d4, 0 10px 22px rgb(212 85 127 / 16%);
+	}
+	:global(.dark) .cover-photo {
+		box-shadow: 0 0 0 2px #8f4f67, 0 10px 22px rgb(0 0 0 / 30%);
+	}
+	@media (min-width: 48rem) {
+		.cover-photo {
+			margin: 0;
+			border-width: 7px;
+			border-radius: 28px;
+			box-shadow: 0 0 0 2px #ffc2d4, 0 18px 34px rgb(212 85 127 / 18%);
+		}
+		:global(.dark) .cover-photo {
+			box-shadow: 0 0 0 2px #8f4f67, 0 18px 34px rgb(0 0 0 / 35%);
+		}
+	}
 	.cover-name {
 		margin: 0;
 		width: fit-content;
 		max-width: 100%;
-		color: var(--foreground);
+		color: var(--candy-logo, var(--foreground));
 		font: 400 clamp(1.64rem, 7.8vw, 2.15rem)/1.49 Pacifico, "Brush Script MT", cursive;
 		letter-spacing: -0.035em;
 		font-synthesis: none;

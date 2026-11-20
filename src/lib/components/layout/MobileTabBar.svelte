@@ -21,7 +21,7 @@
 
 <nav
 	aria-label="主导航"
-	class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+	class="tab-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
 >
 	<a
 		href={HOME_LINK.href}
