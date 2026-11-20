@@ -13,6 +13,7 @@ const dataDir = resolve(env("DATA_DIR", "./data"));
 export const config = {
 	isProd,
 	port: Number(env("PORT", "3000")),
+	bindAddress: env("BIND_ADDRESS", "0.0.0.0"),
 	dataDir,
 	filesDir: join(dataDir, "files"),
 	staticDir: resolve(env("STATIC_DIR", "./dist")),

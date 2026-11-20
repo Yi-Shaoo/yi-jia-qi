@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from "svelte";
+	import { onDestroy, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import * as Dialog from "$lib/components/ui/dialog";
 	import { Button } from "$lib/components/ui/button";
@@ -7,298 +7,320 @@
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import ConfirmButton from "$lib/components/ConfirmButton.svelte";
+	import CollectionNotice from "$lib/components/CollectionNotice.svelte";
 	import { fileUrl } from "$lib/api";
 	import { useCollection } from "$lib/sync.svelte";
-	import { session } from "$lib/session.svelte";
-	import { deletePhoto, uploadPhoto } from "$lib/upload";
-	import { readLocal, writeLocal } from "$lib/local";
-	import { fmtCN, todayKey } from "$lib/dates";
-	import { WHO, otherOf, type Diary, type DiarySide, type Doc, type Who } from "$lib/types";
-	import { cn } from "$lib/utils";
+	import { deletePhoto, photoErrorMessage, uploadPhoto } from "$lib/upload";
+	import { fmtTime } from "$lib/dates";
+	import { WHO, otherOf } from "$lib/types";
+	import { deletionDescription, diaryFields, diaryTitle, invalidField, publication, savedPhotos, sideHasContent, textChanges, type DiaryFields } from "./entry";
+	import { clearTextDraft, entryDraftKey, saveTextDraft, type EditorTarget } from "./drafts";
 	import ImagePlus from "@lucide/svelte/icons/image-plus";
 	import X from "@lucide/svelte/icons/x";
 
-	let {
-		open = $bindable(false),
-		date: initialDate = todayKey(),
-		onsaved,
-	}: { open?: boolean; date?: string; onsaved?: (both: boolean) => void } = $props();
-
+	let { target, onclose, onsaved }: { target: EditorTarget; onclose: () => void; onsaved: () => void } = $props();
+	const { who, item, date, key, draft } = untrack(() => target);
 	const diary = useCollection("diary");
-	const me = $derived(session.who as Who);
+	const other = otherOf(who);
+	const base = diaryFields(item?.data, who, date);
+	const initial = { ...base, ...draft?.fields };
+	const changesOf = (fields: DiaryFields) => textChanges(base, fields, !item);
+	const live = $derived(item ? diary.get(item.id) : undefined);
+	const missing = $derived(!!item && !live);
 
-	interface Draft {
-		date: string;
-		kind: Diary["kind"];
-		title: string;
-		place: string;
-		text: string;
-		fav: string;
-		at: number;
-	}
-	const draftKey = (item: Doc<Diary> | null, who: Who) => `dydraft:${item ? item.id : "new"}:${who}`;
-	const hasWords = (d: Partial<Draft> | null, isNew: boolean) =>
-		!!(d && ((d.text ?? "").trim() || (d.fav ?? "").trim() || (isNew && (d.title ?? "").trim())));
-
-	function byDate(k: string) {
-		return diary.docs.filter((d) => d.data.date === k).sort((a, b) => a.data.c - b.data.c)[0] ?? null;
-	}
-
-	let item = $state<Doc<Diary> | null>(null);
-	let f = $state<Draft>({ date: "", kind: "apart", title: "", place: "", text: "", fav: "", at: 0 });
-	let photo = $state<{ id: string; file: File | null; url: string }>({ id: "", file: null, url: "" });
-	let restored = $state(false);
-	let autoMsg = $state("边写边自动存草稿");
+	let f = $state<DiaryFields>({ ...initial });
+	const anotherOnDate = $derived(!item && !!f.date && diary.docs.some((d) => d.data.date === f.date));
+	let open = $state(true);
+	let active = true;
+	let busy = $state<"upload" | "publish" | "delete" | null>(null);
+	let invalid = $state<ReturnType<typeof invalidField>>(null);
 	let err = $state("");
-	let busy = $state(false);
+	let restored = $state(!!draft);
+	let savedAt = $state(draft?.at || 0);
+	let lastSaved = JSON.stringify(changesOf(initial));
+	let draftError = $state("");
+	let draftHint = $state("");
 	let fileInput: HTMLInputElement;
-
-	function load(it: Doc<Diary> | null, date: string) {
-		item = it;
-		const side = it?.data[me];
-		f = {
-			date: it?.data.date ?? date,
-			kind: it?.data.kind ?? "apart",
-			title: it?.data.title ?? "",
-			place: side?.pl ?? (me === "jq" && it?.data.place && !it.data.yi?.pl ? it.data.place : ""),
-			text: side?.t ?? "",
-			fav: side?.fav ?? "",
-			at: 0,
-		};
-		if (photo.url) URL.revokeObjectURL(photo.url);
-		photo = { id: side?.photo ?? "", file: null, url: "" };
-		const dr = readLocal<Draft>(draftKey(it, me));
-		restored = false;
-		if (dr && hasWords(dr, !it) && (!it || !dr.date || dr.date === it.data.date)) {
-			f = { ...f, text: dr.text ?? "", fav: dr.fav ?? "", place: dr.place || f.place };
-			if (!it) f = { ...f, date: dr.date || f.date, title: dr.title ?? "", kind: dr.kind ?? f.kind };
-			restored = true;
-		}
-		autoMsg = "边写边自动存草稿";
-		err = "";
-	}
-
-	// 打开时加载那天的日记（没有就是新的一篇）
-	let wasOpen = false;
+	let bodyInput = $state<HTMLTextAreaElement | null>(null);
+	let viewportHeight = $state("100dvh"), viewportCenter = $state("50%");
 	$effect(() => {
-		const o = open;
-		untrack(() => {
-			if (o && !wasOpen) load(byDate(initialDate), initialDate);
-			if (!o && wasOpen) saveDraft();
-			wasOpen = o;
-		});
+		const viewport = window.visualViewport;
+		if (!viewport) return;
+		function fit() {
+			if (!viewport) return;
+			viewportHeight = `${viewport.height}px`;
+			viewportCenter = `${viewport.offsetTop + viewport.height / 2}px`;
+		}
+		fit();
+		viewport.addEventListener("resize", fit);
+		viewport.addEventListener("scroll", fit);
+		return () => {
+			viewport.removeEventListener("resize", fit);
+			viewport.removeEventListener("scroll", fit);
+		};
+	});
+	let file = $state.raw<File | null>(null);
+	let preview = $state("");
+	let removedPhoto = $state(false);
+	let uploadedId = "";
+	const savedPhoto = $derived(live?.data[who]?.photo ?? "");
+	const photoSrc = $derived(preview || (!removedPhoto && !file && savedPhoto ? fileUrl(savedPhoto) : ""));
+	const photoChanged = $derived(!!file || removedPhoto);
+
+	$effect(() => {
+		if (!file) { preview = ""; return; }
+		const url = URL.createObjectURL(file);
+		preview = url;
+		return () => URL.revokeObjectURL(url);
 	});
 
-	function saveDraft(): boolean {
-		const key = draftKey(item, me);
-		if (hasWords(f, !item)) {
-			if (writeLocal(key, { ...f, at: Date.now() })) {
-				autoMsg = `草稿已自动保存 · ${new Date().toTimeString().slice(0, 5)}`;
-				return true;
+	function persist(fields: DiaryFields, explicit = false): "saved" | "empty" | "failed" {
+		const changes = changesOf(fields);
+		const serialized = JSON.stringify(changes);
+		if (serialized !== lastSaved || draftError || (explicit && changes)) {
+			const at = Date.now();
+			const ok = changes ? saveTextDraft(key, changes, at) : clearTextDraft(key);
+			if (!ok) {
+				draftError = changes ? "没能保存本机文字草稿。关闭前请复制文字，或直接发布。" : "没能清除本机文字草稿。";
+				return "failed";
 			}
-			return false;
+			lastSaved = serialized;
+			savedAt = changes ? at : 0;
+			restored = false;
+			draftError = "";
+			draftHint = "";
 		}
-		writeLocal(key, null);
-		return false;
-	}
-	let timer = 0;
-	function onInput() {
-		clearTimeout(timer);
-		timer = window.setTimeout(saveDraft, 500);
+		return changes ? "saved" : "empty";
 	}
 
-	function onDateChange() {
-		const ex = byDate(f.date);
-		if (ex && ex.id !== item?.id) {
-			saveDraft();
-			load(ex, f.date);
-			toast(`这天已经有日记了，帮你打开了 ${WHO[me]} 的那一边`);
-		} else if (!ex && item) {
-			saveDraft();
-			const d = f.date;
-			load(null, d);
-			f.date = d;
-		} else saveDraft();
+	$effect(() => {
+		const fields = { ...f };
+		untrack(() => { if (active) persist(fields); });
+	});
+	onDestroy(() => { active = false; });
+
+	function finish() {
+		if (!active) return;
+		active = false;
+		onclose();
+	}
+
+	function closeEditor(next: boolean) {
+		if (next) return;
+		if (busy || persist(f) === "failed") { open = true; return; }
+		if (photoChanged) toast("照片变更未保存");
+		finish();
+	}
+
+	function keepDraft() {
+		if (busy) return;
+		const result = persist(f, true);
+		if (result === "failed") return;
+		if (result === "empty") {
+			draftHint = photoChanged ? "只有照片变更，不能存成文字草稿。请发布或补写文字。" : "没有要存入草稿的文字改动。";
+			return;
+		}
+		toast.success(photoChanged ? "文字草稿已保存，照片变更未保存" : "文字草稿已保存");
+		finish();
 	}
 
 	function discard() {
-		writeLocal(draftKey(item, me), null);
-		load(item, f.date);
+		if (!clearTextDraft(key)) { draftError = "没能清除本机文字草稿。"; return; }
+		lastSaved = "null";
+		f = { ...base };
 		restored = false;
-		toast("草稿已丢掉");
+		savedAt = 0;
+		draftError = "";
+		draftHint = "";
+		invalid = null;
+		err = "";
+		toast("文字草稿已丢掉");
 	}
 
 	function pickPhoto(e: Event) {
-		const el = e.currentTarget as HTMLInputElement;
-		const file = el.files?.[0];
-		el.value = "";
-		if (!file) return;
-		if (photo.url) URL.revokeObjectURL(photo.url);
-		photo = { id: "", file, url: URL.createObjectURL(file) };
+		const input = e.currentTarget as HTMLInputElement;
+		const picked = input.files?.[0];
+		input.value = "";
+		if (!picked) return;
+		file = picked;
+		removedPhoto = false;
+		uploadedId = "";
+		draftHint = "";
+		invalid = null;
+		err = "";
 	}
+
 	function clearPhoto() {
-		if (photo.url) URL.revokeObjectURL(photo.url);
-		photo = { id: "", file: null, url: "" };
+		file = null;
+		removedPhoto = !!savedPhoto;
+		uploadedId = "";
+		draftHint = "";
 	}
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
-		const text = f.text.trim();
-		const fav = f.fav.trim();
-		const title = f.title.trim();
-		if (!f.date) return (err = "选一下日期");
-		if (!text && !fav && !photo.id && !photo.file) return (err = "写一句话再保存");
-		if (f.kind === "together" && !title && !item?.data.title) return (err = "见面的一天要写一下是哪次约会");
-		busy = true;
-		let photoId = photo.id;
-		try {
-			if (photo.file) {
-				err = "正在上传照片…";
-				photoId = await uploadPhoto(photo.file);
-			}
-		} catch {
-			busy = false;
-			return (err = "照片没传上去，可以换一张试试");
+		if (busy || !diary.ready || missing) return;
+		const form = { ...f };
+		invalid = invalidField(form, !!file || (!removedPhoto && !!savedPhoto));
+		if (invalid) {
+			document.getElementById(`dy-${invalid}`)?.focus();
+			return;
 		}
-		const side: DiarySide = { t: text.slice(0, 800), fav: fav.slice(0, 80), photo: photoId, pl: f.place.trim().slice(0, 40) };
-		const patch: Partial<Diary> = { date: f.date, kind: f.kind, [me]: side };
-		if (title || !item) patch.title = title.slice(0, 40);
-		if (item?.data.place && me === "jq" && side.pl === item.data.place) patch.place = "";
-		const oldPhoto = item?.data[me]?.photo ?? "";
-		const other = otherOf(me);
-		const both = !!item && !!(item.data[other]?.t || item.data[other]?.fav || item.data[other]?.photo);
+		err = "";
+		busy = file && !uploadedId ? "upload" : "publish";
 		try {
-			if (item) await diary.update(item.id, patch);
-			else {
-				const empty: DiarySide = { t: "", fav: "", photo: "" };
-				await diary.add({ c: Date.now(), yi: empty, jq: empty, title: "", ...patch } as Diary);
+			if (file && !uploadedId) uploadedId = await uploadPhoto(file);
+			if (!active || !diary.ready) return;
+			busy = "publish";
+			const current = item ? diary.get(item.id) : undefined;
+			if (item && !current) return;
+			const { fields, side, patch, entry } = publication(base, form, who, current?.data, file ? uploadedId : removedPhoto ? "" : undefined);
+			if (invalidField(fields, !!side.photo)) {
+				err = "日记已在别处更改，请重新打开后再发布。";
+				return;
 			}
-			if (oldPhoto && oldPhoto !== photoId) deletePhoto(oldPhoto);
-			writeLocal(draftKey(item, me), null);
-			writeLocal(draftKey(null, me), null);
-			err = "";
-			open = false;
-			wasOpen = false;
-			toast.success(both ? "日记已发布，两扇窗都打开啦 ♥" : `保存好了，另一边留给 ${WHO[other]}`);
-			onsaved?.(both);
-		} catch {
-			err = "没保存上，再试一次";
+			const previousPhoto = current?.data[who]?.photo;
+			const saved = item ? await diary.update(item.id, patch) : await diary.add(entry);
+			if (previousPhoto && !savedPhotos(saved.data).includes(previousPhoto)) void deletePhoto(previousPhoto);
+			const cleared = clearTextDraft(key, true);
+			finish();
+			toast.success(sideHasContent(saved.data[other]) ? "日记已发布，两边都写好了" : `日记已发布，另一边留给 ${WHO[other]}`);
+			if (!cleared) toast.warning("日记已发布，但没能清除本机草稿");
+			onsaved();
+		} catch (e) {
+			err = busy === "upload" ? photoErrorMessage(e) : "没能发布日记，内容还在，请重试。";
 		} finally {
-			busy = false;
+			busy = null;
 		}
 	}
 
 	async function removeAll() {
-		if (!item) return;
-		const it = item;
+		if (busy || !diary.ready || !live) return;
+		const { id, data } = live;
+		busy = "delete";
+		err = "";
 		try {
-			await diary.remove(it.id);
-			for (const w of ["yi", "jq"] as const) {
-				writeLocal(draftKey(it, w), null);
-				if (it.data[w]?.photo) deletePhoto(it.data[w].photo);
-			}
-			open = false;
-			wasOpen = false;
-			toast("已删除");
+			await diary.remove(id);
+			const cleared = (["yi", "jq"] as const).map((w) => clearTextDraft(entryDraftKey(id, w), true));
+			for (const photoId of savedPhotos(data)) void deletePhoto(photoId);
+			finish();
+			toast.success("已删除整篇日记");
+			if (cleared.includes(false)) toast.warning("没能清除本机对应的草稿");
 		} catch {
-			err = "没删掉，再试一次";
+			err = "没能删除这篇日记，请重试。";
+		} finally {
+			busy = null;
 		}
 	}
-
-	function keepDraft() {
-		if (saveDraft()) {
-			toast("草稿已保存，下次打开会自动恢复");
-			open = false;
-		} else toast("还没写内容");
-	}
-
-	const apart = $derived(f.kind === "apart");
-	const otherWrote = $derived(!!item && !!(item.data[otherOf(me)]?.t || item.data[otherOf(me)]?.fav));
-	const photoSrc = $derived(photo.url || (photo.id ? fileUrl(photo.id) : ""));
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="max-h-[92dvh] overflow-y-auto sm:max-w-xl">
-		<Dialog.Header>
-			<Dialog.Title class="font-display text-xl">{item ? fmtCN(item.data.date) : "写下这一天"}</Dialog.Title>
-			<Dialog.Description>
-				你在写 {WHO[me]} 的这一边{otherWrote ? `，${WHO[otherOf(me)]} 已经写好了` : ""}
-			</Dialog.Description>
+<Dialog.Root bind:open onOpenChange={closeEditor}>
+	<Dialog.Content class="flex max-h-[calc(var(--editor-height)-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl" style={`--editor-height:${viewportHeight};top:${viewportCenter}`} showCloseButton={!busy}
+		onOpenAutoFocus={(e) => { if (bodyInput) { e.preventDefault(); bodyInput.focus(); } }}
+		onEscapeKeydown={(e) => { if (busy) e.preventDefault(); }} onInteractOutside={(e) => { if (busy) e.preventDefault(); }}>
+		<Dialog.Header class="shrink-0 px-5 pt-4 pr-16 pb-2 text-left">
+			<Dialog.Title class="font-display text-xl break-words">{item ? diaryTitle(live?.data ?? item.data) : "新日记"}</Dialog.Title>
+			{#if item}<Dialog.Description>{WHO[other]} 的这一边{sideHasContent(live?.data[other]) ? "已发布" : "还没写"}</Dialog.Description>{/if}
 		</Dialog.Header>
 
-		{#if restored}
-			<div class="flex items-center justify-between gap-2 rounded-xl bg-sand px-3 py-2 text-sm text-sand-ink">
-				已恢复上次没写完的草稿
-				<Button variant="ghost" size="xs" onclick={discard}>丢掉草稿</Button>
-			</div>
-		{/if}
-
-		<form onsubmit={submit} oninput={onInput} class="flex flex-col gap-4">
-			<div class="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr]">
-				<div class="flex flex-col gap-1.5">
-					<Label for="dy-date">日期</Label>
-					<Input id="dy-date" type="date" bind:value={f.date} onchange={onDateChange} required />
+		<form id="diary-publish" novalidate onsubmit={submit} oninput={() => { invalid = null; err = ""; draftHint = ""; }} class="grid min-h-0 min-w-0 gap-4 overflow-y-auto overscroll-contain px-5 py-3">
+			{#if restored}
+				<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-sand px-3 py-2 text-sm text-sand-ink">
+					<span role="status">已恢复文字草稿{savedAt ? ` · ${fmtTime(savedAt)}` : ""}</span>
+					<Button variant="ghost" size="xs" disabled={!!busy} onclick={discard}>丢掉草稿</Button>
 				</div>
-				<div class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">这一天</span>
-					<div class="grid grid-cols-2 rounded-full bg-muted p-1" role="radiogroup" aria-label="这一天是">
-						{#each [["apart", "各自的一天"], ["together", "见面的一天"]] as const as [k, label] (k)}
-							<button
-								type="button"
-								role="radio"
-								aria-checked={f.kind === k}
-								onclick={() => {
-									f.kind = k;
-									saveDraft();
-								}}
-								class={cn("h-8 rounded-full text-sm font-medium", f.kind === k ? "bg-card shadow-sm" : "text-muted-foreground")}
-							>
-								{label}
-							</button>
-						{/each}
+			{/if}
+			<CollectionNotice status={diary.status} retry={() => diary.load()} label="日记" />
+			{#if missing && !busy}<p role="alert" class="text-sm text-destructive">这篇日记已不存在，无法发布改动。</p>{/if}
+			{#if item}{@render sharedFields()}{/if}
+			{#snippet sharedFields()}
+			<fieldset disabled={!!busy} class="grid min-w-0 gap-3">
+				<legend class="mb-2 font-semibold">两人共用</legend>
+				{#if live?.data.place}<p class="text-sm text-muted-foreground wrap-anywhere">共享地点：{live.data.place}</p>{/if}
+				<div class="grid min-w-0 gap-3 sm:grid-cols-[160px_1fr]">
+					<div class="grid min-w-0 gap-1.5">
+						<Label for="dy-date">日期</Label>
+						<Input id="dy-date" type="date" bind:value={f.date} required aria-invalid={invalid === "date"} aria-describedby={invalid === "date" ? "dy-date-error" : undefined} />
+						{#if invalid === "date"}<span id="dy-date-error" role="alert" class="text-xs text-destructive">请选择日记日期。</span>{/if}
+					</div>
+					<fieldset class="min-w-0">
+						<legend class="mb-1.5 text-sm leading-none font-medium">日记类型</legend>
+						<div class="grid grid-cols-2 rounded-full bg-muted p-1">
+							{#each [["apart", "各自的一天"], ["together", "见面的一天"]] as const as [kind, label] (kind)}
+								<label class="min-w-0 cursor-pointer">
+									<input type="radio" name="dy-kind" value={kind} bind:group={f.kind} class="peer sr-only" />
+									<span class="block rounded-full py-1.5 text-center text-sm font-medium text-muted-foreground peer-checked:bg-card peer-checked:text-foreground peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-ring">{label}</span>
+								</label>
+							{/each}
+						</div>
+					</fieldset>
+				</div>
+				{#if anotherOnDate}<p class="text-xs text-muted-foreground" role="status">这一天已有日记，发布会另存一篇。</p>{/if}
+				<div class="grid gap-1.5">
+					<Label for="dy-title">{f.kind === "together" ? "约会标题（必填）" : "标题"}</Label>
+					<Input id="dy-title" bind:value={f.title} maxlength={40} required={f.kind === "together"} aria-invalid={invalid === "title"} aria-describedby={invalid === "title" ? "dy-title-error" : undefined} />
+					{#if invalid === "title"}<span id="dy-title-error" role="alert" class="text-xs text-destructive">请填写约会标题。</span>{/if}
+				</div>
+			</fieldset>
+
+			{/snippet}
+			<fieldset disabled={!!busy} aria-describedby="dy-rule" class="grid min-w-0 gap-3">
+				<legend class="mb-1 font-semibold">{WHO[who]} 的这一边</legend>
+				<p id="dy-rule" role={invalid === "text" ? "alert" : undefined} class={invalid === "text" ? "text-sm text-destructive" : "text-xs text-muted-foreground"}>
+					{invalid === "text" ? "还不能发布：" : ""}正文、瞬间或照片至少填一项。
+				</p>
+				<div class="grid gap-1.5">
+					<Label for="dy-text">正文</Label>
+					<Textarea id="dy-text" bind:ref={bodyInput} bind:value={f.text} class="field-sizing-fixed" rows={3} maxlength={800} aria-invalid={invalid === "text"} aria-describedby="dy-rule" />
+				</div>
+				<div class="grid min-w-0 gap-3 sm:grid-cols-2">
+					<div class="grid gap-1.5">
+						<Label for="dy-fav">最喜欢的瞬间</Label>
+						<Input id="dy-fav" bind:value={f.fav} maxlength={80} />
+					</div>
+					<div class="grid gap-1.5">
+						<Label for="dy-place">我在哪</Label>
+						<Input id="dy-place" bind:value={f.place} maxlength={40} />
 					</div>
 				</div>
-			</div>
-			<p class="-mt-2 text-xs text-muted-foreground">
-				{apart ? "只写一句话就能保存，标题、地点和照片都可以不填。" : "写下这次约会，标题必填。"}
-			</p>
-
-			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-				<div class="flex flex-col gap-1.5">
-					<Label for="dy-title">{apart ? "标题（可选）" : "这次约会"}</Label>
-					<Input id="dy-title" bind:value={f.title} maxlength={40} placeholder={apart ? "比如：考前的一天" : "比如：Doheny 海滩烧烤"} />
+				<div class="flex items-center gap-3">
+					{#if photoSrc}
+						<div class="relative size-20 overflow-hidden rounded-lg">
+							<img src={photoSrc} alt={`${WHO[who]} 的日记照片`} class="size-full object-cover" />
+							<button type="button" class="photo-remove" aria-label="移除照片" onclick={clearPhoto}><X aria-hidden="true" /></button>
+						</div>
+					{/if}
+					<Button variant="outline" size="sm" onclick={() => fileInput.click()}><ImagePlus />{photoSrc ? "更换照片" : "加一张照片"}</Button>
+					<input bind:this={fileInput} type="file" accept="image/*" aria-label="选择日记照片" class="hidden" onchange={pickPhoto} />
 				</div>
-				<div class="flex flex-col gap-1.5">
-					<Label for="dy-place">我在哪（可选）</Label>
-					<Input id="dy-place" bind:value={f.place} maxlength={40} placeholder="比如：UCLA 宿舍" />
-				</div>
-			</div>
-			<div class="flex flex-col gap-1.5">
-				<Label for="dy-text">{apart ? "今天的一句话" : "我的心得"}</Label>
-				<Textarea id="dy-text" bind:value={f.text} rows={apart ? 3 : 5} maxlength={800} placeholder={apart ? "一句话就可以，比如：今天好想你" : "今天最开心的是…"} />
-			</div>
-			<div class="flex flex-col gap-1.5">
-				<Label for="dy-fav">最喜欢的瞬间（可选）</Label>
-				<Input id="dy-fav" bind:value={f.fav} maxlength={80} />
-			</div>
-			<div class="flex items-center gap-3">
-				{#if photoSrc}
-					<div class="relative size-20 overflow-hidden rounded-lg">
-						<img src={photoSrc} alt="" class="size-full object-cover" />
-						<button type="button" class="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white" aria-label="移除照片" onclick={clearPhoto}><X class="size-3.5" /></button>
-					</div>
+				{#if photoChanged && !draftHint}
+					<p class="text-xs text-muted-foreground">{file ? "草稿只存文字，发布时才上传照片。" : "草稿不保存照片变更，发布后才会移除照片。"}</p>
 				{/if}
-				<Button variant="outline" size="sm" class="rounded-full" onclick={() => fileInput.click()}><ImagePlus />{photoSrc ? "换一张" : "加一张照片"}</Button>
-				<input bind:this={fileInput} type="file" accept="image/*" class="hidden" onchange={pickPhoto} />
-			</div>
+			</fieldset>
 
-			<p class="text-xs text-muted-foreground" role="status">{err || autoMsg}</p>
-
-			<Dialog.Footer class="flex-wrap gap-2">
-				{#if item}<ConfirmButton variant="outline" class="mr-auto" confirmLabel="确定删除整篇？" onconfirm={removeAll}>删除整篇</ConfirmButton>{/if}
-				<Button variant="ghost" onclick={keepDraft}>存草稿</Button>
-				<Button type="submit" disabled={busy}>{busy ? "保存中…" : "发布"}</Button>
-			</Dialog.Footer>
+			{#if !item}{@render sharedFields()}{/if}
+			{#if live}
+				<div class="border-t pt-3">
+					<ConfirmButton variant="ghost" class="text-destructive" disabled={!!busy || !diary.ready} description={deletionDescription(live.data)} confirmLabel="确认删除整篇日记" onconfirm={removeAll}>删除整篇</ConfirmButton>
+				</div>
+			{/if}
 		</form>
+
+		<div class="grid shrink-0 gap-2 border-t px-5 py-3">
+			{#if err}<p class="text-sm text-destructive" role="alert">{err}</p>{/if}
+			{#if draftError}
+				<div class="flex flex-wrap items-center gap-2">
+					<p class="text-sm text-destructive" role="alert">{draftError}</p>
+					<Button variant="outline" size="sm" disabled={!!busy} onclick={finish}>不保存并关闭</Button>
+				</div>
+			{/if}
+			{#if !draftError && (draftHint || !restored)}
+				<p class="text-xs text-muted-foreground" role="status">{draftHint || (savedAt ? `文字草稿已保存 · ${fmtTime(savedAt)}` : "文字自动存为本机草稿。")}</p>
+			{/if}
+			<Dialog.Footer class="flex-row justify-end">
+				<Button variant="ghost" disabled={!!busy} onclick={keepDraft}>存草稿</Button>
+				<Button type="submit" form="diary-publish" disabled={!!busy || !diary.ready || missing}>{busy === "upload" ? "上传照片中…" : busy === "publish" ? "发布中…" : "发布"}</Button>
+			</Dialog.Footer>
+		</div>
 	</Dialog.Content>
 </Dialog.Root>

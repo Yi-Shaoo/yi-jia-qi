@@ -8,12 +8,15 @@
     "dev:web": "vite",
     "dev:server": "bun --watch server/index.ts",
     "build": "vite build",
+    "test": "bun test tests/unit",
+    "test:ui": "bun run build && playwright test",
     "start": "NODE_ENV=production bun server/index.ts",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.server.json",
     "import:legacy": "bun scripts/import-legacy.ts"
   },
   "devDependencies": {
     "@internationalized/date": "^3.12.0",
+    "@playwright/test": "^1.65.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/vite": "^4.3.5",
     "@tsconfig/svelte": "^5.0.8",

@@ -14,7 +14,7 @@
 		"嘿嘿，被你发现了",
 		"今天的你也很可爱",
 	];
-	let say = $state("欢迎光临！我是布丁，戳戳我");
+	let say = $state("我是布丁，戳戳我");
 	let hop = $state(false);
 	let btn: HTMLButtonElement;
 	let t = 0;
@@ -39,9 +39,9 @@
 </script>
 
 <div class="flex items-end gap-3">
-	<div role="status" class="relative mb-10 max-w-[180px] rounded-2xl rounded-br-sm bg-card px-3 py-2 text-[13px] shadow-[0_0_0_1px_var(--border)]">{say}</div>
+	<div role="status" class="relative mb-5 max-w-44 rounded-xl rounded-br-sm bg-muted px-3 py-2 text-xs text-pretty text-muted-foreground">{say}</div>
 	<button bind:this={btn} type="button" onclick={poke} aria-label="戳一下布丁" class={["shrink-0 transition-transform", hop && "animate-pop"]}>
-		<svg viewBox="0 0 120 128" class="h-28 w-[104px]" aria-hidden="true">
+		<svg viewBox="0 0 120 128" class="h-20 w-[75px]" aria-hidden="true">
 			<ellipse cx="60" cy="122" rx="30" ry="4.5" fill="#000" opacity=".08" />
 			<ellipse cx="18" cy="80" rx="6.5" ry="8.5" fill="#fff4e4" stroke="#ffd6c2" stroke-width="2" />
 			<ellipse cx="102" cy="80" rx="6.5" ry="8.5" fill="#fff4e4" stroke="#ffd6c2" stroke-width="2" />

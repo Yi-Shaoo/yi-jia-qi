@@ -1,18 +1,22 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 	import { Button } from "$lib/components/ui/button";
+	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import PlayCard from "./PlayCard.svelte";
 	import { useCollection } from "$lib/sync.svelte";
-	import { session } from "$lib/session.svelte";
-	import { readLocal, writeLocal } from "$lib/local";
+	import { me as account } from "$lib/session.svelte";
+	import { accountKey, readLocal, writeLocal } from "$lib/local";
 	import { fmtTime } from "$lib/dates";
-	import { WHO, otherOf, type Who } from "$lib/types";
+	import { WHO, otherOf } from "$lib/types";
 	import { cn } from "$lib/utils";
+
+	let { id }: { id: string } = $props();
 
 	/** 漂流瓶：写一句话扔给对方，对方捡起来才能看 */
 	const bottles = useCollection("bottles");
-	const me = $derived(session.who as Who);
+	const me = account();
+	const key = accountKey("btdraft", me);
 	const list = $derived(bottles.docs.filter((b) => b.data.t));
 	const waiting = $derived(list.filter((b) => b.data.from !== me && !b.data.picked).sort((a, b) => a.data.c - b.data.c));
 	const sent = $derived(list.filter((b) => b.data.from === me && !b.data.picked).length);
@@ -22,30 +26,42 @@
 
 	let openId = $state<string | null>(null);
 	const opened = $derived(openId ? list.find((b) => b.id === openId) : undefined);
-	let text = $state(readLocal<string>("btdraft") ?? "");
+	let text = $state(readLocal<string>(key) ?? "");
 	let throwing = $state(false);
+	let picking = $state(false);
 
-	function pickUp() {
+	async function pickUp() {
 		const b = waiting[0];
-		if (!b) return;
-		openId = b.id;
-		bottles.update(b.id, { picked: true, pickedAt: Date.now() }).catch(() => {});
+		if (!b || picking || throwing) return;
+		picking = true;
+		try {
+			await bottles.update(b.id, { picked: true, pickedAt: Date.now() });
+			openId = b.id;
+		} catch {
+			toast.error("没捡起来，再试一次");
+		} finally {
+			picking = false;
+		}
 	}
 	async function send(e: SubmitEvent) {
 		e.preventDefault();
-		const v = text.trim();
-		if (!v) return;
+		const original = text;
+		const v = original.trim();
+		if (!v || throwing || picking) return;
 		openId = null;
 		throwing = true;
 		try {
 			await bottles.add({ from: me, t: v.slice(0, 300), c: Date.now(), picked: false });
-			text = "";
-			writeLocal("btdraft", null);
+			if (text === original) {
+				text = "";
+				writeLocal(key, null);
+			}
 			toast(`瓶子扔出去了，等 ${WHO[otherOf(me)]} 来捡`);
+			setTimeout(() => (throwing = false), 1200);
 		} catch {
+			throwing = false;
 			toast.error("没扔出去，再试一次");
 		}
-		setTimeout(() => (throwing = false), 1200);
 	}
 </script>
 
@@ -58,36 +74,43 @@
 	</svg>
 {/snippet}
 
-<PlayCard title="漂流瓶" meta={list.length ? `一共 ${list.length} 个` : ""}>
-	<div class="relative flex min-h-36 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#bfe6f5,#8fcbe6)] p-4 text-[#173f5a] dark:bg-[linear-gradient(180deg,#123049,#0e2436)] dark:text-[#cfe6f3]">
+<PlayCard {id} title="漂流瓶" meta={list.length ? `一共 ${list.length} 个` : ""}>
+	<div class="relative flex min-h-36 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#bfe6f5,#8fcbe6)] p-4 text-[#173f5a] dark:bg-[linear-gradient(180deg,#123049,#0e2436)] dark:text-[#cfe6f3]">
 		{#if throwing}
 			{@render bottle("animate-[float-up_1.2s_ease-out_forwards] [--dy:-80px] [--dx:120px]")}
+		{:else if picking}
+			<p role="status" class="text-sm">捡起中…</p>
 		{:else if opened}
-			<button type="button" onclick={() => (openId = null)} title="点一下收起" class="w-full animate-pop rounded-xl bg-[#fffdf5] p-4 text-left text-[#3b2f2a] shadow">
-				<p class="text-[15px] whitespace-pre-line">{opened.data.t}</p>
-				<small class="mt-2 block text-xs opacity-70">来自 {WHO[opened.data.from]} · {fmtTime(opened.data.c)}</small>
-			</button>
+			<div class="w-full animate-pop rounded-xl bg-[#fffdf5] p-4 text-[#3b2f2a] shadow">
+				<p class="text-[15px] wrap-anywhere whitespace-pre-line">{opened.data.t}</p>
+				<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+					<small class="text-xs opacity-70">来自 {WHO[opened.data.from]} · {fmtTime(opened.data.c)}</small>
+					<Button size="sm" variant="outline" onclick={() => (openId = null)}>收起</Button>
+				</div>
+			</div>
 		{:else if waiting.length}
 			<button type="button" onclick={pickUp} class="flex flex-col items-center gap-1 text-sm font-medium">
 				{@render bottle("animate-bounce")}
-				{waiting.length > 1 ? `漂来了 ${waiting.length} 个瓶子，捡一个` : "海边漂来一个瓶子，捡起来看看"}
+				捡一个瓶子（{waiting.length} 个待捡）
 			</button>
-		{:else}
-			<p class="text-center text-sm">{sent ? `你扔出的 ${sent} 个瓶子还在海上漂，等 ${WHO[otherOf(me)]} 来捡` : "海面很安静。扔一个瓶子过去吧。"}</p>
+		{:else if !sent}
+			<p class="text-center text-sm">海面很安静。</p>
 		{/if}
+		{#if sent}<p class="text-center text-sm">你扔出的 {sent} 个瓶子，等 {WHO[otherOf(me)]} 来捡。</p>{/if}
 	</div>
 	<form onsubmit={send} class="flex flex-col gap-2">
-		<Textarea bind:value={text} oninput={() => writeLocal("btdraft", text)} maxlength={300} rows={2} placeholder="写一句话装进瓶子，扔向对方的海边" />
-		<Button type="submit" class="self-start rounded-full" disabled={!text.trim()}>扔出去</Button>
+		<Label for="bottle-text">瓶中留言</Label>
+		<Textarea id="bottle-text" bind:value={text} oninput={(e) => writeLocal(key, e.currentTarget.value)} maxlength={300} rows={2} />
+		<Button type="submit" class="self-start rounded-full" disabled={throwing || picking || !text.trim()}>扔出去</Button>
 	</form>
 	<details>
-		<summary class="cursor-pointer text-sm font-medium text-muted-foreground select-none">捡到过的瓶子（{picked.length}）</summary>
+		<summary class="min-h-11 cursor-pointer content-center text-sm font-medium text-muted-foreground select-none">捡到过的瓶子（{picked.length}）</summary>
 		<div class="mt-3 flex flex-col gap-2">
 			{#if !picked.length}<p class="text-sm text-muted-foreground">还没有被捡到的瓶子。</p>{/if}
 			{#each picked as b (b.id)}
 				<div class="flex gap-2 border-b pb-2 text-sm last:border-b-0">
-					<span class={cn("shrink-0 font-semibold", b.data.from === "yi" ? "text-yi" : "text-jq")}>{WHO[b.data.from]}</span>
-					<span class="flex-1 whitespace-pre-line">{b.data.t}</span>
+					<span class={cn("shrink-0 font-semibold", b.data.from === "yi" ? "text-yi" : "text-jq")}>来自 {WHO[b.data.from]}</span>
+					<span class="min-w-0 flex-1 wrap-anywhere whitespace-pre-line">{b.data.t}</span>
 					<span class="shrink-0 font-mono text-xs text-muted-foreground">{fmtTime(b.data.c)}</span>
 				</div>
 			{/each}

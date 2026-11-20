@@ -6,16 +6,22 @@
 	import { NAV_GROUPS, groupOf } from "$lib/nav";
 	import { route } from "$lib/router.svelte";
 	import { session, logout } from "$lib/session.svelte";
-	import { syncState } from "$lib/sync.svelte";
+	import { syncState, useCollection } from "$lib/sync.svelte";
+	import { todayDiaryAction } from "$lib/components/diary/drafts";
+	import { localDay } from "$lib/local-day";
 	import { WHO } from "$lib/types";
 	import { cn } from "$lib/utils";
-	import { toggleMode, mode } from "mode-watcher";
+	import { setMode, userPrefersMode } from "mode-watcher";
+	import Monitor from "@lucide/svelte/icons/monitor";
 	import PenLine from "@lucide/svelte/icons/pen-line";
 	import Moon from "@lucide/svelte/icons/moon";
 	import Sun from "@lucide/svelte/icons/sun";
 	import LogOut from "@lucide/svelte/icons/log-out";
 
 	const active = $derived(groupOf(route.path));
+	const diary = useCollection("diary");
+	const diaryAction = $derived(todayDiaryAction(diary, session.who, $localDay));
+	const diaryLabels = { "今日日记": "今日日记", "继续写草稿": "继续写日记草稿", "改我的这一边": "改今天的日记", "写下今天": "写今天的日记" } as const;
 </script>
 
 <header class="sticky top-0 z-40 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -29,6 +35,7 @@
 				<NavigationMenu.Item>
 					<NavigationMenu.Link
 						href="/"
+						active={route.path === "/"}
 						class={cn(
 							"h-9 rounded-full px-4 py-0 font-medium text-muted-foreground",
 							active === "home" && "bg-card text-foreground shadow-sm",
@@ -53,13 +60,14 @@
 									<li>
 										<NavigationMenu.Link
 											href={l.href}
+											active={route.path === l.href}
 											class={cn(
-												"flex-col items-start gap-0.5 rounded-xl p-3",
+												"flex-row items-center gap-3 rounded-xl p-3",
 												route.path === l.href && "bg-muted",
 											)}
 										>
-											<span class="font-semibold">{l.label}</span>
-											<span class="text-[13px] leading-snug text-muted-foreground">{l.desc}</span>
+											<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-sea"><l.icon aria-hidden="true" class="size-4" /></span>
+											<span><span class="block font-semibold">{l.label}</span>{#if l.desc}<span class="block text-[13px] leading-snug text-muted-foreground">{l.desc}</span>{/if}</span>
 										</NavigationMenu.Link>
 									</li>
 								{/each}
@@ -71,16 +79,15 @@
 		</NavigationMenu.Root>
 
 		<div class="ml-auto flex items-center gap-2">
-			<span
-				class={cn("size-2 rounded-full", syncState.connected ? "bg-emerald-500" : "bg-amber-400")}
-				title={syncState.connected ? "和对方实时同步中" : "正在重新连接…"}
-			></span>
-			<span class="sr-only">{syncState.connected ? "实时同步中" : "正在重新连接"}</span>
+			<span role="status" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+				<i aria-hidden="true" class={cn("size-2 rounded-full", syncState.connected ? "bg-emerald-500" : "bg-amber-400")}></i>
+				<span class:sr-only={!syncState.reconnecting}>{syncState.connected ? "实时同步中" : syncState.reconnecting ? "正在重连" : "正在连接"}</span>
+			</span>
 			{#if session.who}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
-							<button {...props} class="rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label="账号菜单">
+							<button {...props} class="grid size-11 place-items-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label="账号菜单">
 								<WhoBadge who={session.who!} />
 							</button>
 						{/snippet}
@@ -88,16 +95,19 @@
 					<DropdownMenu.Content align="end" class="w-48">
 						<DropdownMenu.Label>我是 {WHO[session.who]}</DropdownMenu.Label>
 						<DropdownMenu.Separator />
-						<DropdownMenu.Item onclick={toggleMode}>
-							{#if mode.current === "dark"}<Sun />浅色模式{:else}<Moon />深色模式{/if}
-						</DropdownMenu.Item>
+						<DropdownMenu.RadioGroup value={userPrefersMode.current} aria-label="外观" onValueChange={(value) => { if (value === 'system' || value === 'light' || value === 'dark') setMode(value); }}>
+							<DropdownMenu.RadioItem value="system"><Monitor />跟随系统</DropdownMenu.RadioItem>
+							<DropdownMenu.RadioItem value="light"><Sun />浅色模式</DropdownMenu.RadioItem>
+							<DropdownMenu.RadioItem value="dark"><Moon />深色模式</DropdownMenu.RadioItem>
+						</DropdownMenu.RadioGroup>
+						<DropdownMenu.Separator />
 						<DropdownMenu.Item onclick={logout}><LogOut />退出登录</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{/if}
-			<Button href="/diary?write=today" class="hidden h-10 rounded-full px-5 md:inline-flex">
-				<PenLine />写下今天
-			</Button>
+			{#if route.path !== "/diary"}
+				<Button href="/diary?write=today" class="hidden h-10 rounded-full px-5 md:inline-flex"><PenLine />{route.path === "/" ? diaryAction.label : diaryLabels[diaryAction.label]}</Button>
+			{/if}
 		</div>
 	</div>
 </header>

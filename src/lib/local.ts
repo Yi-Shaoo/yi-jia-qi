@@ -1,4 +1,8 @@
-/** localStorage 读写（隐私模式下可能不可用，所以都包在 try 里）。只存草稿这类本机小东西。 */
+import type { Who } from "./types";
+
+export function accountKey(name: string, owner: Who) {
+	return `${name}:${owner}`;
+}
 
 export function readLocal<T>(key: string): T | null {
 	try {

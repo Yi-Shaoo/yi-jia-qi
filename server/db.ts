@@ -114,6 +114,19 @@ const qFileGet = db.query<{ id: string; type: string; size: number }, [string]>(
 	"SELECT id, type, size FROM files WHERE id = ?",
 );
 const qFileDel = db.query<unknown, [string]>("DELETE FROM files WHERE id = ?");
+const qFileUse = db.query<{ used: number }, [string]>(`
+	SELECT 1 AS used FROM docs WHERE
+		(col = 'photos' AND json_extract(data, '$.asset') = ?1) OR
+		(col = 'meta' AND json_extract(data, '$.hero') = ?1) OR
+		(col = 'diary' AND ?1 IN (json_extract(data, '$.yi.photo'), json_extract(data, '$.jq.photo'))) OR
+		(col = 'memories' AND EXISTS (SELECT 1 FROM json_each(docs.data, '$.photos') WHERE value = ?1)) OR
+		(col = 'spots' AND EXISTS (SELECT 1 FROM json_each(docs.data, '$.p') WHERE value = ?1))
+	LIMIT 1
+`);
+
+export function fileInUse(id: string): boolean {
+	return !!qFileUse.get(id);
+}
 
 export function recordFile(id: string, type: string, size: number, by: string | null) {
 	qFilePut.run(id, type, size, Date.now(), by);

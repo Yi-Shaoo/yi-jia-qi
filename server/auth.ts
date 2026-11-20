@@ -70,15 +70,17 @@ export async function readSession(req: Request): Promise<Who | null> {
 	return safeEqual(sig, expect) ? who : null;
 }
 
-/** 很简单的登录限速：同一个 IP 每 10 分钟最多试 10 次 */
-const attempts = new Map<string, { n: number; reset: number }>();
-export function allowLoginAttempt(ip: string) {
-	const now = Date.now();
-	const a = attempts.get(ip);
-	if (!a || a.reset < now) {
-		attempts.set(ip, { n: 1, reset: now + 10 * 60e3 });
-		return true;
-	}
-	a.n++;
-	return a.n <= 10;
+const failures = new Map<string, { count: number; until: number }>();
+
+export function loginCooldown(ip: string, now = Date.now()) {
+	const entry = failures.get(ip);
+	if (!entry) return 0;
+	if (entry.until <= now) { failures.delete(ip); return 0; }
+	return entry.count < 10 ? 0 : Math.ceil((entry.until - now) / 1000);
+}
+
+export function recordLoginFailure(ip: string, now = Date.now()) {
+	const entry = failures.get(ip);
+	if (entry && entry.until > now) entry.count++;
+	else failures.set(ip, { count: 1, until: now + 600_000 });
 }

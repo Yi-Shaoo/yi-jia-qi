@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { accountApi } from "./api";
 import type { CollectionName, Collections, Doc } from "./types";
 
 type ChangeEvent =
@@ -12,12 +12,15 @@ type ChangeEvent =
 export class Collection<T> {
 	docs = $state<Doc<T>[]>([]);
 	status = $state<"loading" | "ready" | "error">("loading");
+	#api = accountApi();
 	#loading: Promise<void> | null = null;
 
 	constructor(public readonly name: CollectionName) {}
 
 	load(): Promise<void> {
-		this.#loading ??= api<{ docs: Doc<T>[] }>(`/c/${this.name}`)
+		if (this.#loading) return this.#loading;
+		if (this.status === "error") this.status = "loading";
+		this.#loading = this.#api<{ docs: Doc<T>[] }>(`/c/${this.name}`)
 			.then((r) => {
 				this.docs = r.docs;
 				this.status = "ready";
@@ -56,7 +59,7 @@ export class Collection<T> {
 	}
 
 	async add(data: T): Promise<Doc<T>> {
-		const doc = await api<Doc<T>>(`/c/${this.name}`, { method: "POST", body: JSON.stringify(data) });
+		const doc = await this.#api<Doc<T>>(`/c/${this.name}`, { method: "POST", body: JSON.stringify(data) });
 		this.put(doc);
 		return doc;
 	}
@@ -65,7 +68,7 @@ export class Collection<T> {
 		const prev = this.get(id);
 		this.put({ id, data, updated: Date.now() });
 		try {
-			const doc = await api<Doc<T>>(`/c/${this.name}/${id}`, { method: "PUT", body: JSON.stringify(data) });
+			const doc = await this.#api<Doc<T>>(`/c/${this.name}/${id}`, { method: "PUT", body: JSON.stringify(data) });
 			this.put(doc);
 			return doc;
 		} catch (e) {
@@ -79,7 +82,7 @@ export class Collection<T> {
 		const prev = this.get(id);
 		if (prev) this.put({ id, data: { ...prev.data, ...patch }, updated: Date.now() });
 		try {
-			const doc = await api<Doc<T>>(`/c/${this.name}/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+			const doc = await this.#api<Doc<T>>(`/c/${this.name}/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 			this.put(doc);
 			return doc;
 		} catch (e) {
@@ -92,7 +95,7 @@ export class Collection<T> {
 		const prev = this.get(id);
 		this.drop(id);
 		try {
-			await api(`/c/${this.name}/${id}`, { method: "DELETE" });
+			await this.#api(`/c/${this.name}/${id}`, { method: "DELETE" });
 		} catch (e) {
 			if (prev) this.put(prev);
 			throw e;
@@ -113,7 +116,7 @@ export function useCollection<K extends CollectionName>(name: K): Collection<Col
 	return c;
 }
 
-export const syncState = $state({ connected: false });
+export const syncState = $state({ connected: false, reconnecting: false });
 
 let source: EventSource | null = null;
 let everConnected = false;
@@ -121,16 +124,21 @@ let everConnected = false;
 /** 登录后调用：打开实时通道。断线重连后重新拉一遍数据，保证不漏改动。 */
 export function startSync() {
 	if (source) return;
-	source = new EventSource("/api/events");
-	source.addEventListener("ready", () => {
+	const stream = source = new EventSource("/api/events");
+	stream.addEventListener("ready", () => {
+		if (stream !== source) return;
 		syncState.connected = true;
+		syncState.reconnecting = false;
 		if (everConnected) for (const c of registry.values()) c.load().catch(() => {});
 		everConnected = true;
 	});
-	source.onerror = () => {
+	stream.onerror = () => {
+		if (stream !== source) return;
 		syncState.connected = false;
+		syncState.reconnecting = true;
 	};
-	source.onmessage = (e) => {
+	stream.onmessage = (e) => {
+		if (stream !== source) return;
 		let ev: ChangeEvent;
 		try {
 			ev = JSON.parse(e.data);
@@ -148,6 +156,7 @@ export function stopSync() {
 	source?.close();
 	source = null;
 	syncState.connected = false;
+	syncState.reconnecting = false;
 	everConnected = false;
 	registry.clear();
 }

@@ -3,7 +3,8 @@ import { unlink } from "node:fs/promises";
 import { join, normalize, sep } from "node:path";
 import { config } from "./config";
 import {
-	allowLoginAttempt,
+	loginCooldown,
+	recordLoginFailure,
 	clearCookie,
 	readSession,
 	sessionCookie,
@@ -13,6 +14,7 @@ import {
 import {
 	deleteDoc,
 	fileInfo,
+	fileInUse,
 	forgetFile,
 	getDoc,
 	isCollection,
@@ -80,17 +82,27 @@ async function api(req: Request, url: URL, server: Bun.Server<undefined>): Promi
 	if (path === "/health") return json({ ok: true });
 
 	if (path === "/login" && method === "POST") {
-		if (!allowLoginAttempt(clientIp(req, server))) return fail(429, "试太多次了，过十分钟再来");
+		const ip = clientIp(req, server);
+		const limited = (seconds: number) => json({ error: "登录暂时受限，请稍后再试" }, { status: 429, headers: { "retry-after": String(seconds) } });
+		const wait = loginCooldown(ip);
+		if (wait) return limited(wait);
 		const body = await readBody(req);
+		const pending = loginCooldown(ip);
+		if (pending) return limited(pending);
 		const who = typeof body?.password === "string" ? whoForPassword(body.password) : null;
-		if (!who) return fail(401, "密码不对");
+		if (!who) {
+			recordLoginFailure(ip);
+			return fail(401, "密码不对");
+		}
 		return json({ who }, { headers: { "set-cookie": await sessionCookie(who, isHttps(req)) } });
 	}
+	const who = await readSession(req);
+	const expected = req.headers.get("x-yjq-account");
+	if (who && expected !== null && who !== expected) return fail(412, "登录账号已变更");
 	if (path === "/logout" && method === "POST") {
 		return json({ ok: true }, { headers: { "set-cookie": clearCookie() } });
 	}
 
-	const who = await readSession(req);
 	if (!who) return fail(401, "请先登录");
 
 	if (path === "/me") return json({ who });
@@ -115,6 +127,7 @@ async function api(req: Request, url: URL, server: Bun.Server<undefined>): Promi
 	}
 	if (fileId && method === "DELETE") {
 		const id = fileId;
+		if (fileInUse(id)) return fail(409, "其他记录仍在使用这张照片");
 		await unlink(join(config.filesDir, id)).catch(() => {});
 		forgetFile(id);
 		return json({ ok: true });
@@ -192,6 +205,7 @@ function serveStatic(url: URL): Response {
 
 const server = Bun.serve({
 	port: config.port,
+	hostname: config.bindAddress,
 	// SSE 长连接需要更长的空闲时间
 	idleTimeout: 255,
 	async fetch(req, server) {

@@ -1,29 +1,22 @@
 <script lang="ts" generics="K extends string">
-	import { cn } from "$lib/utils";
-
 	let {
 		options,
 		value = $bindable(),
 		label = "筛选",
-	}: { options: Record<K, string>; value: K; label?: string } = $props();
+		wrap = false,
+	}: { options: Record<K, string>; value: K; label?: string; wrap?: boolean } = $props();
 	const keys = $derived(Object.keys(options) as K[]);
+	const name = $props.id();
 </script>
 
-<div role="radiogroup" aria-label={label} class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
-	{#each keys as k (k)}
-		<button
-			type="button"
-			role="radio"
-			aria-checked={value === k}
-			onclick={() => (value = k)}
-			class={cn(
-				"h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
-				value === k
-					? "border-foreground bg-foreground text-background"
-					: "border-border bg-card text-foreground hover:bg-muted",
-			)}
-		>
-			{options[k]}
-		</button>
-	{/each}
-</div>
+<fieldset class="min-w-0 border-0 p-0">
+	<legend class="sr-only">{label}</legend>
+	<div class={['flex gap-2 py-1 md:mx-0 md:flex-wrap md:px-0', wrap ? 'flex-wrap' : '-mx-4 overflow-x-auto px-4']}>
+		{#each keys as k (k)}
+			<label class="group relative shrink-0 cursor-pointer">
+				<input type="radio" {name} value={k} bind:group={value} class="peer sr-only" />
+				<span class="inline-flex h-11 items-center rounded-full md:h-9 border border-border px-4 text-sm font-medium transition-colors peer-not-checked:group-hover:bg-muted peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">{options[k]}</span>
+			</label>
+		{/each}
+	</div>
+</fieldset>

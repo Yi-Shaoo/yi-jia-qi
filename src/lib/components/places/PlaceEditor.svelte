@@ -7,7 +7,7 @@
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import ConfirmButton from "$lib/components/ConfirmButton.svelte";
-	import { AREA } from "$lib/data/content";
+	import { AREA, type Area } from "$lib/data/content";
 	import { useCollection } from "$lib/sync.svelte";
 	import type { CustomPlace, Doc } from "$lib/types";
 
@@ -15,12 +15,18 @@
 		open = $bindable(false),
 		kind,
 		item = null,
-	}: { open?: boolean; kind: "date" | "food"; item?: Doc<CustomPlace> | null } = $props();
+		initialArea,
+		onsaved,
+	}: {
+		open?: boolean; kind: "date" | "food"; item?: Doc<CustomPlace> | null;
+		initialArea: Area | "all"; onsaved: (area: Area) => void;
+	} = $props();
 
 	const custom = useCollection("custom");
-	const areas = $derived((kind === "date" ? ["oc", "la", "mid", "far"] : ["oc", "la", "mid"]) as (keyof typeof AREA)[]);
+	const areas: Area[] = $derived(kind === "date" ? ["oc", "la", "mid", "far"] : ["oc", "la", "mid"]);
+	const noun = $derived(kind === "date" ? "地点" : "餐厅");
 
-	let f = $state({ name: "", area: "oc", type: "", price: "", desc: "", tip: "", q: "" });
+	let f = $state({ name: "", area: "oc" as Area, type: "", price: "", desc: "", tip: "", q: "" });
 	let err = $state("");
 	let busy = $state(false);
 
@@ -29,7 +35,7 @@
 		const d = item?.data;
 		f = {
 			name: d?.name ?? "",
-			area: d && AREA[d.area as keyof typeof AREA] ? d.area : "oc",
+			area: d && areas.includes(d.area as Area) ? d.area as Area : initialArea !== "all" && areas.includes(initialArea) ? initialArea : "oc",
 			type: d?.type ?? "",
 			price: d?.price ?? "",
 			desc: d?.desc ?? "",
@@ -41,15 +47,17 @@
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
+		if (busy) return;
 		const name = f.name.trim();
 		if (!name) {
 			err = "先写一个名字";
 			return;
 		}
+		const savedArea = f.area;
 		const data: CustomPlace = {
 			kind,
 			name: name.slice(0, 40),
-			area: f.area,
+			area: savedArea,
 			type: f.type.trim().slice(0, 20),
 			price: kind === "food" ? f.price : "",
 			desc: f.desc.trim().slice(0, 200),
@@ -61,8 +69,9 @@
 		try {
 			if (item) await custom.update(item.id, data);
 			else await custom.add(data);
-			toast.success(item ? "已保存" : "加好了");
+			toast.success(initialArea !== "all" && initialArea !== savedArea ? `已保存到${AREA[savedArea]}` : item ? "已保存" : `已添加${noun}`);
 			open = false;
+			onsaved(savedArea);
 		} catch {
 			err = "没保存上，再试一次";
 		} finally {
@@ -71,33 +80,35 @@
 	}
 
 	async function remove() {
-		if (!item) return;
+		if (!item || busy) return;
+		busy = true;
 		try {
 			await custom.remove(item.id);
 			toast("已删除");
 			open = false;
 		} catch {
 			err = "没删掉，再试一次";
+		} finally {
+			busy = false;
 		}
 	}
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg" showCloseButton={!busy} escapeKeydownBehavior={busy ? "ignore" : "close"} interactOutsideBehavior={busy ? "ignore" : "close"}>
 		<Dialog.Header>
-			<Dialog.Title class="font-display text-xl">{item ? "编辑" : kind === "date" ? "加一个约会地点" : "加一家店"}</Dialog.Title>
-			<Dialog.Description>自己写名字、介绍和小贴士，两个人都能看到。</Dialog.Description>
+			<Dialog.Title class="font-display text-xl">{item ? "编辑" : "添加"}{noun}</Dialog.Title>
 		</Dialog.Header>
-		<form onsubmit={submit} class="flex flex-col gap-4">
+		<form onsubmit={submit} inert={busy} aria-busy={busy} class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1.5">
 				<Label for="pe-name">名字</Label>
 				<Input id="pe-name" bind:value={f.name} maxlength={40} required />
 			</div>
 			<div class="grid grid-cols-2 gap-3">
 				<div class="flex flex-col gap-1.5">
-					<Label>在哪</Label>
-					<Select.Root type="single" value={f.area} onValueChange={(v) => (f.area = v)}>
-						<Select.Trigger class="w-full">{AREA[f.area as keyof typeof AREA]}</Select.Trigger>
+					<Label id="pe-region-label" for="pe-region">地区</Label>
+					<Select.Root type="single" value={f.area} onValueChange={(v) => { if (areas.includes(v as Area)) f.area = v as Area; }}>
+						<Select.Trigger id="pe-region" aria-labelledby="pe-region-label pe-region-value" class="w-full"><span id="pe-region-value">{AREA[f.area]}</span></Select.Trigger>
 						<Select.Content>
 							{#each areas as a (a)}<Select.Item value={a} label={AREA[a]} />{/each}
 						</Select.Content>
@@ -110,9 +121,9 @@
 			</div>
 			{#if kind === "food"}
 				<div class="flex flex-col gap-1.5">
-					<Label>价位</Label>
+					<Label id="pe-price-label" for="pe-price">价位</Label>
 					<Select.Root type="single" value={f.price} onValueChange={(v) => (f.price = v)}>
-						<Select.Trigger class="w-full">{f.price || "不填"}</Select.Trigger>
+						<Select.Trigger id="pe-price" aria-labelledby="pe-price-label pe-price-value" class="w-full"><span id="pe-price-value">{f.price || "不填"}</span></Select.Trigger>
 						<Select.Content>
 							{#each ["", "$", "$$", "$$$", "$$$$"] as p (p)}<Select.Item value={p} label={p || "不填"} />{/each}
 						</Select.Content>
@@ -133,7 +144,7 @@
 			</div>
 			{#if err}<p class="text-sm text-destructive" role="alert">{err}</p>{/if}
 			<Dialog.Footer class="gap-2">
-				{#if item}<ConfirmButton variant="outline" class="mr-auto" onconfirm={remove}>删除</ConfirmButton>{/if}
+				{#if item}<ConfirmButton variant="ghost" class="mr-auto text-destructive" disabled={busy} confirmLabel={`删除${noun}`} description={`从共享清单删除「${item.data.name}」？无法撤销。`} onconfirm={remove}>删除{noun}</ConfirmButton>{/if}
 				<Button variant="outline" onclick={() => (open = false)}>取消</Button>
 				<Button type="submit" disabled={busy}>保存</Button>
 			</Dialog.Footer>

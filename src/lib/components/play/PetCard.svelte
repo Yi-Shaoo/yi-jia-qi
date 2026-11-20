@@ -10,6 +10,8 @@
 	import { WHO, type PetState } from "$lib/types";
 	import { cn } from "$lib/utils";
 
+	let { id }: { id: string } = $props();
+
 	/** 糯糯：两个人一起养的小宠物。饱饱 24 小时掉光，开心 12 小时掉光。 */
 	const pet = useCollection("pet");
 	const st = $derived<PetState>({ fedAt: 0, fedBy: "", pettedAt: 0, pettedBy: "", feeds: 0, ...(pet.get("state")?.data ?? {}) });
@@ -42,9 +44,13 @@
 		sayTimer = window.setTimeout(() => (say = ""), ms);
 	}
 	function walkTo(target: number, then?: () => void) {
+		if (reducedMotion()) {
+			then?.();
+			return;
+		}
 		dir = target >= x ? 1 : -1;
 		walking = true;
-		walkMs = reducedMotion() ? 0 : Math.max(300, Math.abs(target - x) * 45);
+		walkMs = Math.max(300, Math.abs(target - x) * 45);
 		x = target;
 		window.setTimeout(() => {
 			walking = false;
@@ -68,7 +74,7 @@
 
 	async function feed() {
 		if (snack) return;
-		const sx = Math.max(6, Math.min(84, x + (Math.random() < 0.5 ? -1 : 1) * (20 + Math.random() * 25)));
+		const sx = reducedMotion() ? x : Math.max(6, Math.min(84, x + (Math.random() < 0.5 ? -1 : 1) * (20 + Math.random() * 25)));
 		snack = { x: sx, color: pick(["#ffb5c8", "#a8e3f2", "#caf2c0", "#fde58a", "#d7c4ff"]) };
 		if (sleeping) {
 			sleeping = false;
@@ -104,13 +110,17 @@
 		requestAnimationFrame(() => (hop = true));
 		heartBurst(petEl);
 		speak(pick(["呼噜呼噜～", "再摸摸！", "最喜欢你了", "嘿嘿"]));
-		await pet.set("state", { ...st, pettedAt: Date.now(), pettedBy: session.who ?? "" }).catch(() => {});
-		now = Date.now();
+		try {
+			await pet.set("state", { ...st, pettedAt: Date.now(), pettedBy: session.who ?? "" });
+			now = Date.now();
+		} catch {
+			toast.error("没存上，再试一次");
+		}
 	}
 	const by = (k: string) => (k === "yi" || k === "jq" ? `${WHO[k]} ` : "");
 </script>
 
-<PlayCard title="我们的小宠物 · 糯糯" meta={`糯糯现在${status}`} class="lg:row-span-2">
+<PlayCard {id} title="我们的小宠物 · 糯糯" meta={status}>
 	<div class="relative h-56 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#e3eef5_0%,#f6f1e7_70%)] dark:bg-[linear-gradient(180deg,#17303f,#1a2638_70%)]">
 		<div class="absolute inset-x-0 bottom-0 h-14 bg-[#e8dcc4] dark:bg-[#2e2717]"></div>
 		{#if snack}
@@ -167,5 +177,4 @@
 	<p class="text-[13px] text-muted-foreground">
 		上次喂：{by(st.fedBy)}{ago(st.fedAt)} · 上次摸头：{by(st.pettedBy)}{ago(st.pettedAt)}{st.feeds ? ` · 一共喂了 ${st.feeds} 次` : ""}
 	</p>
-	<p class="text-[13px] text-muted-foreground">糯糯是你们俩一起养的，谁喂了对方都看得到。点它可以摸摸。</p>
 </PlayCard>

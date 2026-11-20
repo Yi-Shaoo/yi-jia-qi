@@ -1,7 +1,12 @@
 <script lang="ts">
+	import { onDestroy, tick } from "svelte";
 	import { toast } from "svelte-sonner";
 	import PageHeader from "$lib/components/PageHeader.svelte";
+	import CollectionNotice from "$lib/components/CollectionNotice.svelte";
+	import MemoryText from "$lib/components/MemoryText.svelte";
 	import Polaroid from "$lib/components/Polaroid.svelte";
+	import PhotoActions from "$lib/components/PhotoActions.svelte";
+	import Pencil from "@lucide/svelte/icons/pencil";
 	import Lightbox from "$lib/components/Lightbox.svelte";
 	import ConfirmButton from "$lib/components/ConfirmButton.svelte";
 	import { Button } from "$lib/components/ui/button";
@@ -11,215 +16,294 @@
 	import * as Dialog from "$lib/components/ui/dialog";
 	import { fileUrl } from "$lib/api";
 	import { useCollection } from "$lib/sync.svelte";
-	import { deletePhoto, uploadPhoto } from "$lib/upload";
-	import { filmStamp, fmtDots, isDateKey, todayKey } from "$lib/dates";
+	import { query } from "$lib/router.svelte";
+	import { deletePhoto } from "$lib/upload";
+	import { createMemoryDraft, releasePreview, saveMemoryDraft, type MemoryDraft } from "$lib/memory-draft";
+	import { filmStamp, fmtDots, todayKey } from "$lib/dates";
+	import { groupMemories, isMemoryDate, memoryTitle } from "$lib/memory-timeline";
+	import { THANKS, XMAS } from "$lib/data/content";
 	import type { Doc, Memory } from "$lib/types";
 	import Plus from "@lucide/svelte/icons/plus";
 	import X from "@lucide/svelte/icons/x";
 	import ImagePlus from "@lucide/svelte/icons/image-plus";
 
 	const memories = useCollection("memories");
-	const list = $derived(
-		memories.docs
-			.filter((d) => isDateKey(d.data.date) && typeof d.data.title === "string")
-			.sort((a, b) => (a.data.date < b.data.date ? -1 : a.data.date > b.data.date ? 1 : (a.data.c ?? 0) - (b.data.c ?? 0))),
-	);
+	const { timeline: list, pending } = $derived(groupMemories(memories.docs));
+	const empty = $derived(memories.ready && !memories.docs.length);
+	const plans = [THANKS, XMAS].filter((p) => p.date >= todayKey());
+	const item = $derived(query("item"));
+	const target = $derived(item && memories.get(item)?.id);
+	$effect(() => {
+		if (!target) return;
+		const heading = document.getElementById(`memory-${target}`);
+		heading?.focus({ preventScroll: true });
+		heading?.scrollIntoView({ block: "center" });
+	});
 
-	// —— 看大图 ——
-	let lb = $state<{ mem: Doc<Memory>; photo: string } | null>(null);
+	function photoName(title: string, index: number) {
+		return `「${title.trim() || "新回忆"}」第 ${index + 1} 张照片`;
+	}
+	let lb = $state<{ id: string; photo: string; index: number } | null>(null);
 	let lbOpen = $state(false);
-	async function removePhotoFromMemory() {
+	const lbMemory = $derived(lb && memories.get(lb.id));
+	const lbIndex = $derived(lb && lbMemory ? (lbMemory.data.photos?.[lb.index] === lb.photo ? lb.index : (lbMemory.data.photos?.indexOf(lb.photo) ?? -1)) : -1);
+	let removingPhoto = $state(false);
+	function turnPhoto(step: number) {
+		if (!lbMemory || lbIndex < 0 || removingPhoto) return;
+		const index = lbIndex + step, photo = lbMemory.data.photos[index];
+		if (photo) lb = { id: lbMemory.id, photo, index };
+	}
+	function returnToPhoto() {
 		if (!lb) return;
-		const { mem, photo } = lb;
-		lbOpen = false;
+		const thumb = document.getElementById(`memory-photo-${lb.id}-${Math.max(0, lbIndex)}`);
+		(thumb ?? document.getElementById(`memory-${lb.id}`))?.focus();
+	}
+	async function removePhotoFromMemory() {
+		if (!lb || !lbMemory || lbIndex < 0 || removingPhoto) return;
+		const { id, photo } = lb;
+		const remaining = lbMemory.data.photos.filter((_, i) => i !== lbIndex);
+		removingPhoto = true;
 		try {
-			await memories.update(mem.id, { photos: mem.data.photos.filter((p) => p !== photo) });
-			deletePhoto(photo);
+			await memories.update(id, { photos: remaining });
+			if (!remaining.includes(photo)) void deletePhoto(photo);
+			lbOpen = false;
 			toast("照片已删除");
 		} catch {
-			toast.error("没删掉，再试一次");
+			toast.error("照片未删除，请重试");
+		} finally {
+			removingPhoto = false;
 		}
 	}
 
-	// —— 编辑 ——
-	let edOpen = $state(false);
-	let editing = $state<Doc<Memory> | null>(null);
-	let f = $state({ date: "", title: "", text: "" });
-	let keep = $state<string[]>([]);
-	let adds = $state<{ file: File; url: string }[]>([]);
-	let err = $state("");
+	let draft = $state<MemoryDraft | null>(null);
+	let repairId: string | null = null;
+	let message = $state("");
 	let busy = $state(false);
-	let fileInput: HTMLInputElement;
+	let saveFailed = $state(false);
+	let fileInput = $state<HTMLInputElement>();
+	const savedRecord = $derived(draft?.saved ? memories.get(draft.id) : undefined);
+	const failed = $derived(draft?.photos.flatMap((p) => ("file" in p && p.error ? [{ name: p.file.name, error: p.error }] : [])) ?? []);
+	const hasFailures = $derived(saveFailed || failed.length > 0);
+	const retryable = $derived(failed.some((item) => item.error.retryable));
+	const removedCount = $derived(draft?.saved?.photos?.filter((id) => !draft?.photos.some((p) => p.asset === id)).length ?? 0);
+
+	const onlyRejected = $derived(!saveFailed && failed.length > 0 && draft?.saved && !removedCount &&
+		draft.photos.every((p) => !("file" in p) || p.error?.retryable === false) &&
+		draft.date === draft.saved.date && (draft.title === draft.saved.title || draft.title.trim() === draft.saved.title) &&
+		(draft.text === draft.saved.text || draft.text.trim() === (draft.saved.text ?? "")));
 
 	function openEditor(item: Doc<Memory> | null) {
-		editing = item;
-		f = { date: item?.data.date ?? todayKey(), title: item?.data.title ?? "", text: item?.data.text ?? "" };
-		keep = item ? [...(item.data.photos ?? [])] : [];
-		adds.forEach((a) => URL.revokeObjectURL(a.url));
-		adds = [];
-		err = "";
-		edOpen = true;
+		draft = createMemoryDraft(item);
+		repairId = item && pending.some((m) => m.id === item.id) ? item.id : null;
+		message = "";
+		saveFailed = false;
 	}
+	function closeEditor() {
+		const repaired = repairId && list.find((m) => m.id === repairId);
+		repairId = null;
+		draft?.photos.forEach(releasePreview);
+		draft = null;
+		if (repaired) void tick().then(() => document.getElementById(`memory-${repaired.id}`)?.focus());
+	}
+	onDestroy(() => draft?.photos.forEach(releasePreview));
 	function onFiles(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
-		const files = Array.from(input.files ?? []);
+		if (draft && !busy) draft.photos.push(...Array.from(input.files ?? [], (file) => ({ file, preview: URL.createObjectURL(file) })));
 		input.value = "";
-		adds = [...adds, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))];
 	}
-
+	function removePreview(index: number) {
+		if (!draft || busy) return;
+		releasePreview(draft.photos[index]);
+		draft.photos.splice(index, 1);
+		message = "";
+	}
 	async function save(e: SubmitEvent) {
 		e.preventDefault();
-		if (!f.date) return (err = "选一下日期");
-		if (!f.title.trim()) return (err = "写一个标题");
+		if (!draft || busy || onlyRejected) return;
+		if (!isMemoryDate(draft.date)) return (message = "选一下日期");
+		if (!draft.title.trim()) return (message = "写一个标题");
 		busy = true;
-		const ids = [...keep];
-		let bad = 0;
-		for (let i = 0; i < adds.length; i++) {
-			err = `正在上传照片 ${i + 1} / ${adds.length}…`;
-			try {
-				ids.push(await uploadPhoto(adds[i].file));
-			} catch {
-				bad++;
-			}
-		}
-		const data = {
-			date: f.date,
-			title: f.title.trim().slice(0, 40),
-			text: f.text.trim().slice(0, 600),
-			photos: ids,
-			dlabel: editing && editing.data.date === f.date ? (editing.data.dlabel ?? "") : "",
-		};
+		message = "正在保存回忆…";
 		try {
-			if (editing) await memories.update(editing.id, data);
-			else await memories.add({ ...data, c: Date.now() });
-			(editing?.data.photos ?? []).filter((p) => !ids.includes(p)).forEach(deletePhoto);
-			toast.success(bad ? `已保存，有 ${bad} 张照片没传上去（可能是 HEIC 格式）` : "已保存");
-			adds.forEach((a) => URL.revokeObjectURL(a.url));
-			adds = [];
-			edOpen = false;
-			err = "";
+			const missed = await saveMemoryDraft(draft, memories, (i, total) => (message = `正在上传照片 ${i} / ${total}…`));
+			saveFailed = false;
+			if (missed) {
+				message = `回忆已保存，${missed} 张照片未上传。`;
+			} else {
+				toast.success("回忆已保存");
+				closeEditor();
+			}
 		} catch {
-			err = "没保存上，再试一次";
+			saveFailed = true;
+			message = "未能确认回忆已保存，请重试保存。";
 		} finally {
 			busy = false;
 		}
 	}
-
 	async function removeMemory(m: Doc<Memory>) {
+		if (busy) return;
+		busy = true;
 		try {
 			await memories.remove(m.id);
-			(m.data.photos ?? []).forEach(deletePhoto);
-			toast("已删除");
-			edOpen = false;
+			(m.data.photos ?? []).forEach((photo) => { void deletePhoto(photo); });
+			closeEditor();
+			toast("回忆已删除");
 		} catch {
-			toast.error("没删掉，再试一次");
+			toast.error("回忆未删除，请重试");
+		} finally {
+			busy = false;
 		}
 	}
 </script>
 
-<PageHeader eyebrow="Our timeline" title="我们的回忆" lede="按日期排好的每一站。写下那天的事、配上照片，两个人都能看到。">
-	{#snippet actions()}
-		<Button class="rounded-full" onclick={() => openEditor(null)}><Plus />添加一段回忆</Button>
-	{/snippet}
-</PageHeader>
+{#snippet addMemory()}
+	<Button class="rounded-full" onclick={() => openEditor(null)}><Plus />添加一段回忆</Button>
+{/snippet}
+<PageHeader title="我们的回忆" actions={empty ? undefined : addMemory} />
 
-{#if memories.status === "loading"}
-	<p class="text-muted-foreground">正在加载…</p>
-{:else}
-	<ol class="relative flex flex-col gap-10 pl-8 md:pl-12">
-		<span class="absolute top-2 bottom-0 left-[11px] w-0.5 bg-border md:left-[19px]" aria-hidden="true"></span>
-		{#if !list.length}
-			<li class="text-muted-foreground">还没有回忆，点上面的按钮写下第一段。</li>
-		{/if}
+<CollectionNotice status={memories.status} retry={() => memories.load()} />
+{#if memories.ready && item && !target}<p role="status" class="mb-4 text-sm text-muted-foreground">找不到这段回忆。</p>{/if}
+{#if empty}
+	<div class="surface-card flex flex-col items-start gap-3 p-6">
+		<p>还没有回忆</p>
+		{@render addMemory()}
+	</div>
+{:else if list.length}
+	<ol class="relative flex flex-col gap-10 pl-8 before:absolute before:top-2 before:bottom-0 before:left-[11px] before:w-0.5 before:bg-border md:pl-12 md:before:left-[19px]">
 		{#each list as m, idx (m.id)}
 			<li class="relative">
-				<span
-					class="absolute top-1.5 -left-[27px] size-3 rounded-full shadow-[0_0_0_4px_var(--background)] md:-left-[35px] md:size-3.5"
-					style:background={["var(--coral)", "var(--sea)", "var(--sun)"][idx % 3]}
-					aria-hidden="true"
-				></span>
-				<div class="font-mono text-xs text-muted-foreground">{m.data.dlabel || fmtDots(m.data.date)}</div>
-				<div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-					<h2 class="text-2xl font-bold">{m.data.title}</h2>
-					<Button variant="ghost" size="xs" class="rounded-full text-muted-foreground" onclick={() => openEditor(m)}>编辑</Button>
+				<span class="absolute top-1.5 -left-[27px] size-3 rounded-full shadow-[0_0_0_4px_var(--background)] md:-left-[35px] md:size-3.5"
+					style:background={["var(--coral)", "var(--sea)", "var(--sun)"][idx % 3]} aria-hidden="true"></span>
+				<div class={m.data.photos?.length ? "grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-8" : "max-w-prose"}>
+				<div class="min-w-0">
+				<time datetime={m.data.date} class="font-mono text-xs text-muted-foreground">{m.data.dlabel || fmtDots(m.data.date)}</time>
+				<div class="mt-1 flex items-start gap-2">
+					<h2 id={`memory-${m.id}`} tabindex="-1" class="min-w-0 self-center rounded-sm text-2xl font-bold text-balance wrap-anywhere focus:outline-2 focus:outline-offset-4 focus:outline-sea">{m.data.title}</h2>
+					<Button variant="ghost" size="icon" class="text-muted-foreground" title="编辑回忆" aria-label={`编辑回忆：${m.data.title}`} onclick={() => openEditor(m)}><Pencil aria-hidden="true" /></Button>
 				</div>
-				{#if m.data.text}<p class="mt-1 max-w-2xl text-[15px] leading-relaxed whitespace-pre-line text-muted-foreground">{m.data.text}</p>{/if}
+				{#if m.data.text}<MemoryText text={m.data.text} />{/if}
+				</div>
 				{#if m.data.photos?.length}
-					<div class="mt-4 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-3">
-						{#each m.data.photos as p, i (p)}
-							<Polaroid
-								src={fileUrl(p)}
-								alt={m.data.title}
-								stamp={i === 0 && !m.data.dlabel ? filmStamp(m.data.date) : ""}
-								tilt={[-2, 1.5, -1, 2][i % 4]}
-								imgClass="aspect-[4/5] h-auto"
-								class="p-2 pb-3"
-								onclick={() => {
-									lb = { mem: m, photo: p };
-									lbOpen = true;
-								}}
-							/>
+					<div class="grid min-w-0 content-start grid-cols-2 gap-4 sm:grid-cols-3">
+						{#each m.data.photos as p, i}
+							{@const name = photoName(m.data.title, i)}
+							<Polaroid id={`memory-photo-${m.id}-${i}`} src={fileUrl(p)} alt={name} aria-label={`查看${name}`}
+								stamp={i === 0 && !m.data.dlabel ? filmStamp(m.data.date) : ""} tilt={[-2, 1.5, -1, 2][i % 4]}
+								imgClass="aspect-[4/5] h-auto" class="p-2 pb-3"
+								onclick={() => { lb = { id: m.id, photo: p, index: i }; lbOpen = true; }} />
 						{/each}
 					</div>
 				{/if}
+				</div>
 			</li>
 		{/each}
-		<li class="relative">
-			<span class="absolute top-1.5 -left-[27px] size-3 rounded-full border-2 border-dashed border-muted-foreground bg-background md:-left-[35px]" aria-hidden="true"></span>
-			<div class="font-mono text-xs text-muted-foreground">接下来</div>
-			<h2 class="mt-1 text-2xl font-bold">第一个感恩节和圣诞节</h2>
-			<p class="mt-1 text-muted-foreground">写在<a href="/wish" class="text-sea">心愿清单</a>里，一起去完成。</p>
-		</li>
 	</ol>
+	{#if plans.length}
+		<section aria-labelledby="memory-plans" class="mt-10 max-w-xl border-t pt-5">
+			<div class="flex flex-wrap items-baseline justify-between gap-2">
+				<h2 id="memory-plans" class="text-lg font-bold">节日计划</h2>
+				<a href="/wish" class="inline-flex min-h-11 items-center text-sm text-sea underline underline-offset-4">心愿清单</a>
+			</div>
+			<ul class="mt-2 grid gap-1.5">
+				{#each plans as plan (plan.date)}
+					<li class="flex flex-wrap items-baseline gap-x-3"><time datetime={plan.date} class="font-mono text-xs text-muted-foreground">{fmtDots(plan.date)}</time>第一个{plan.title}</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 {/if}
 
-{#if lb}
-	<Lightbox bind:open={lbOpen} src={fileUrl(lb.photo)} alt={lb.mem.data.title} title={lb.mem.data.title}>
-		<ConfirmButton variant="outline" class="rounded-full" confirmLabel="确定删除？" onconfirm={removePhotoFromMemory}>从这段回忆里删掉这张</ConfirmButton>
+{#snippet deleteMemoryButton(saved: Doc<Memory>)}
+	{@const name = memoryTitle(saved.data.title) || "未命名回忆"}
+	{@const n = saved.data.photos?.length ?? 0}
+	<ConfirmButton variant="ghost" class="justify-self-start text-destructive" disabled={busy} aria-label={`删除回忆：${name}`} confirmLabel="删除回忆"
+		description={`删除「${name}」${n ? `和已保存的 ${n} 张照片` : ""}？无法撤销。`} onconfirm={() => removeMemory(saved)}>删除回忆</ConfirmButton>
+{/snippet}
+
+{#if pending.length}
+	<section aria-labelledby="pending-memories" class="mt-8 max-w-prose border-t pt-5">
+		<h2 id="pending-memories" class="text-xl font-bold">待整理的回忆</h2>
+		<ul class="mt-2 divide-y">
+			{#each pending as m (m.id)}
+				{@const title = memoryTitle(m.data.title) || "未命名回忆"}
+				<li class="grid gap-1 py-3 wrap-anywhere">
+					<h3 id={`memory-${m.id}`} tabindex="-1" class="font-semibold">{title}</h3>
+					<p class="text-sm text-muted-foreground">
+						{#if isMemoryDate(m.data.date)}<time datetime={m.data.date}>{m.data.dlabel || fmtDots(m.data.date)}</time> · 缺少标题
+						{:else}{m.data.date ? `日期无效：${m.data.date}` : "缺少日期"}{memoryTitle(m.data.title) ? "" : " · 缺少标题"}{/if}
+					</p>
+					{#if m.data.text}<p class="line-clamp-2 text-sm">{m.data.text}</p>{/if}
+					{#if m.data.photos?.length}
+						<div class="my-1 flex items-center gap-2 text-sm text-muted-foreground">
+							<img src={fileUrl(m.data.photos[0])} alt="" loading="lazy" class="size-14 rounded-lg bg-muted object-scale-down" />
+							<span>{m.data.photos.length} 张照片</span>
+						</div>
+					{/if}
+					<div class="flex flex-wrap gap-2">
+						<Button size="sm" variant="outline" disabled={busy} aria-label={`编辑回忆：${title}`} onclick={() => openEditor(m)}>编辑回忆</Button>
+						{@render deleteMemoryButton(m)}
+					</div>
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
+
+{#if lb && lbMemory && lbIndex >= 0}
+	{@const name = photoName(lbMemory.data.title, lbIndex)}
+	<Lightbox bind:open={lbOpen} src={fileUrl(lb.photo)} alt={name} title={lbMemory.data.title}
+		pager={lbMemory.data.photos.length > 1 ? { index: lbIndex, total: lbMemory.data.photos.length, disabled: removingPhoto, move: turnPhoto } : undefined}
+		canClose={() => !removingPhoto} onreturn={returnToPhoto}>
+		{#snippet actions()}<PhotoActions disabled={removingPhoto} description={`删除${name}？无法撤销。`} remove={removePhotoFromMemory} />{/snippet}
 	</Lightbox>
 {/if}
 
-<Dialog.Root bind:open={edOpen}>
-	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title class="font-display text-xl">{editing ? "编辑回忆" : "添加一段回忆"}</Dialog.Title>
-		</Dialog.Header>
-		<form onsubmit={save} class="flex flex-col gap-4">
-			<div class="grid grid-cols-[150px_1fr] gap-3">
-				<div class="flex flex-col gap-1.5"><Label for="m-date">日期</Label><Input id="m-date" type="date" bind:value={f.date} required /></div>
-				<div class="flex flex-col gap-1.5"><Label for="m-title">标题</Label><Input id="m-title" bind:value={f.title} maxlength={40} placeholder="比如：Doheny 海滩烧烤" /></div>
-			</div>
-			<div class="flex flex-col gap-1.5">
-				<Label for="m-text">那天发生了什么</Label>
-				<Textarea id="m-text" bind:value={f.text} rows={4} maxlength={600} />
-			</div>
-			<div class="flex flex-col gap-2">
-				<Label>照片</Label>
-				<div class="flex flex-wrap gap-2">
-					{#each keep as p, i (p)}
-						<div class="relative size-20 overflow-hidden rounded-lg">
-							<img src={fileUrl(p)} alt="" class="size-full object-cover" />
-							<button type="button" class="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white" aria-label="移除这张" onclick={() => (keep = keep.filter((_, j) => j !== i))}><X class="size-3.5" /></button>
-						</div>
-					{/each}
-					{#each adds as a, i (a.url)}
-						<div class="relative size-20 overflow-hidden rounded-lg">
-							<img src={a.url} alt="" class="size-full object-cover" />
-							<button type="button" class="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white" aria-label="移除这张" onclick={() => { URL.revokeObjectURL(a.url); adds = adds.filter((_, j) => j !== i); }}><X class="size-3.5" /></button>
-						</div>
-					{/each}
-					<button type="button" onclick={() => fileInput.click()} class="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:border-sea hover:text-sea">
-						<ImagePlus class="size-5" />加照片
-					</button>
-					<input bind:this={fileInput} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
+<Dialog.Root bind:open={() => !!draft, (open) => { if (!open && !busy) closeEditor(); }}>
+	{#if draft}
+		<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg" showCloseButton={!busy && !hasFailures}
+			onOpenAutoFocus={(event) => { const heading = document.getElementById("memory-editor-title"); if (heading) { event.preventDefault(); heading.focus({ preventScroll: true }); } }}
+			escapeKeydownBehavior={busy || hasFailures ? "ignore" : "close"} interactOutsideBehavior={busy || hasFailures ? "ignore" : "close"}>
+			<Dialog.Header>
+				<Dialog.Title id="memory-editor-title" tabindex={-1} class="pr-10 font-display text-xl outline-none">{draft.saved ? "编辑回忆" : "添加一段回忆"}</Dialog.Title>
+			</Dialog.Header>
+			<form onsubmit={save} oninput={() => (message = "")} class="flex flex-col gap-4">
+				<div class="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+					<div class="grid gap-1.5"><Label for="m-date">日期</Label><Input id="m-date" type="date" bind:value={draft.date} required disabled={busy} /></div>
+					<div class="grid gap-1.5"><Label for="m-title">标题</Label><Input id="m-title" bind:value={draft.title} maxlength={40} required disabled={busy} /></div>
 				</div>
-			</div>
-			{#if err}<p class="text-sm text-muted-foreground" role="status">{err}</p>{/if}
-			<Dialog.Footer class="gap-2">
-				{#if editing}{@const ed = editing}<ConfirmButton variant="outline" class="mr-auto" onconfirm={() => removeMemory(ed)}>删除这段</ConfirmButton>{/if}
-				<Button variant="outline" onclick={() => (edOpen = false)}>取消</Button>
-				<Button type="submit" disabled={busy}>{busy ? "保存中…" : "保存"}</Button>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
+				<div class="grid gap-1.5">
+					<Label for="m-text">那天发生了什么</Label>
+					<Textarea id="m-text" bind:value={draft.text} rows={4} maxlength={600} disabled={busy} />
+				</div>
+				<fieldset class="min-w-0" disabled={busy}>
+					<legend class="mb-2 text-sm font-medium">照片</legend>
+					<div class="flex flex-wrap gap-2">
+						{#each draft.photos as p, i}
+							<div class="relative size-20 overflow-hidden rounded-lg bg-muted">
+								<img src={"preview" in p ? p.preview : fileUrl(p.asset)} alt={"file" in p ? p.file.name : ""} class="size-full object-cover" />
+								<button type="button" class="photo-remove" aria-label={`移除${photoName(draft.title, i)}`} onclick={() => removePreview(i)}><X aria-hidden="true" /></button>
+							</div>
+						{/each}
+						<button type="button" aria-describedby="m-formats" onclick={() => fileInput?.click()} class="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:border-sea hover:text-sea">
+							<ImagePlus class="size-5" />加照片
+						</button>
+						<input bind:this={fileInput} type="file" accept="image/*" multiple class="hidden" onchange={onFiles} />
+					</div>
+					<p id="m-formats" class="mt-2 text-xs text-muted-foreground">JPG、PNG 等浏览器可读取的图片</p>
+				</fieldset>
+				{#if message}<p class="text-sm" role="status">{message}</p>{/if}
+				{#if failed.length}
+					<ul class="grid gap-1 text-sm text-muted-foreground" aria-label="未上传的照片">
+						{#each failed as item}<li class="break-words"><b>{item.name}</b>：{item.error.message}</li>{/each}
+					</ul>
+				{/if}
+				{#if removedCount}<p class="text-sm">保存后将删除 {removedCount} 张原有照片，无法撤销。</p>{/if}
+				{#if savedRecord}{@render deleteMemoryButton(savedRecord)}{/if}
+				<Dialog.Footer class="gap-2">
+					<Button variant="outline" disabled={busy} onclick={closeEditor}>{onlyRejected ? "完成" : hasFailures ? "放弃未保存内容" : "取消"}</Button>
+					{#if !onlyRejected}<Button type="submit" disabled={busy}>{busy ? "保存中…" : saveFailed ? "重试保存" : retryable ? "重试未上传照片" : "保存回忆"}</Button>{/if}
+				</Dialog.Footer>
+			</form>
+		</Dialog.Content>
+	{/if}
 </Dialog.Root>

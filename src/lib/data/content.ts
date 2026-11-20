@@ -10,7 +10,7 @@ export type ArtIcon =
 export interface Spot { name: string; area: Area; type: string; desc: string; tip: string; q: string }
 export interface FoodSpot extends Spot { price: string }
 export interface Route { name: string; days: string; drive: string; season: string; stops: string[]; kind: RouteKind; q: string }
-export interface HolidayEvent { when: string; name: string; desc: string }
+export interface HolidayEvent { when: string; name: string; desc: string; url: string }
 export interface Holiday { date: string; title: string; sub: string; events: HolidayEvent[]; ideas: string[] }
 export interface Guide { caps: { label: string; icon: ArtIcon }[]; steps: string[]; bring: string; eat: string }
 
@@ -44,7 +44,7 @@ export const DATES: Spot[] = [
     "area": "oc",
     "type": "海滩",
     "desc": "走两百多级台阶下去，人少、浪漂亮。",
-    "tip": "穿好走的鞋",
+    "tip": "去南边礁石看洞穴要等低潮。穿好走的鞋。",
     "q": "Thousand Steps Beach Laguna"
   },
   {
@@ -140,7 +140,7 @@ export const DATES: Spot[] = [
     "area": "la",
     "type": "海滩",
     "desc": "Malibu 的礁石拱门，日落时很梦幻。",
-    "tip": "下去的路有点陡",
+    "tip": "停车位少，下坡较陡；低潮时才能穿过礁石拱门。",
     "q": "El Matador State Beach"
   },
   {
@@ -204,7 +204,7 @@ export const DATES: Spot[] = [
     "area": "mid",
     "type": "散步",
     "desc": "Long Beach 的运河小岛，可以坐意大利小船。",
-    "tip": "冬天有圣诞灯",
+    "tip": "需提前订船；冬天有圣诞灯。",
     "q": "Gondola Getaway Long Beach"
   },
   {
@@ -220,7 +220,7 @@ export const DATES: Spot[] = [
     "area": "mid",
     "type": "城市",
     "desc": "停在港口的老邮轮，可以上去参观。",
-    "tip": "晚上看港口夜景",
+    "tip": "",
     "q": "Queen Mary Long Beach"
   },
   {
@@ -244,7 +244,7 @@ export const DATES: Spot[] = [
     "area": "mid",
     "type": "散步",
     "desc": "Long Beach 海边的小街，咖啡馆很多。",
-    "tip": "日落后去海边走走",
+    "tip": "",
     "q": "Belmont Shore Long Beach"
   },
   {
@@ -252,7 +252,7 @@ export const DATES: Spot[] = [
     "area": "far",
     "type": "户外",
     "desc": "这次可以试试浮潜或者坐玻璃底船。",
-    "tip": "从 Long Beach 或 Dana Point 上船",
+    "tip": "提前订往返船票，从 Long Beach 或 Dana Point 上船。",
     "q": "Catalina Island"
   },
   {
@@ -268,7 +268,7 @@ export const DATES: Spot[] = [
     "area": "far",
     "type": "城市",
     "desc": "在城堡前一起看烟火。",
-    "tip": "节日期间有圣诞装饰",
+    "tip": "提前购票。节日期间有圣诞装饰。",
     "q": "Disneyland Resort"
   },
   {
@@ -667,26 +667,31 @@ export const THANKS: Holiday = {
     {
       "when": "11.26",
       "name": "LA Turkey Trot",
+      "url": "https://turkeytrot.la/turkey-trot-los-angeles/race-day",
       "desc": "DTLA 的感恩节早晨跑步，跑完回去吃大餐。"
     },
     {
       "when": "11.27–28",
       "name": "《小鬼当家》音乐会",
+      "url": "https://www.laphil.com/events/instances/1py8126p/2026-11-27/home-alone-in-concert-2026",
       "desc": "Walt Disney Concert Hall 现场乐团配电影放映。11.28–29 还有《圣诞精灵》。"
     },
     {
       "when": "11.27",
       "name": "Lighting of the Bay",
+      "url": "https://www.newportdunes.com/fire-and-lights-festival/",
       "desc": "Newport Dunes 的点灯仪式和烟火。"
     },
     {
-      "when": "11.27 起",
+      "when": "11.27–次年 1.3",
       "name": "L.A. LIVE 溜冰场",
-      "desc": "DTLA 的露天节日溜冰场，开到 1 月 3 日。"
+      "url": "https://www.lalive.com/events/detail/holiday-ice-26-27",
+      "desc": "DTLA 的露天节日溜冰场。"
     },
     {
       "when": "11.29",
       "name": "Hollywood 圣诞游行",
+      "url": "https://thehollywoodchristmasparade.org/grand-marshal-press-release/",
       "desc": "好莱坞大道上的花车游行。"
     }
   ],
@@ -705,48 +710,57 @@ export const XMAS: Holiday = {
   "sub": "12 月 25 日 · 星期五",
   "events": [
     {
-      "when": "11.20–1.10",
+      "when": "11.20–次年 1.10",
       "name": "LA Zoo Lights",
+      "url": "https://lazoo.org/plan-your-visit/special-experiences/zoolights/",
       "desc": "洛杉矶动物园的夜间灯会。"
     },
     {
-      "when": "11.22–1.9",
+      "when": "11.22–次年 1.9",
       "name": "Descanso 光之森林",
+      "url": "https://www.descansogardens.org/enchanted-faqs/",
       "desc": "La Cañada 的植物园灯光步道，非常浪漫。"
     },
     {
-      "when": "11.18–1.3",
+      "when": "11.18–次年 1.3",
       "name": "Santa Monica 瑞士冬日村",
+      "url": "https://www.santamonica.gov/press/2026/11/02/new-swiss-winter-village-brings-european-holiday-market-experience-to-santa-monica-pier",
       "desc": "码头上的圣诞市集和海边溜冰场。"
     },
     {
-      "when": "11.21–1.3",
+      "when": "11.21–次年 1.3",
       "name": "环球影城节日季",
+      "url": "https://www.universalstudioshollywood.com/web/en/us/things-to-do/events-and-seasonal-activities/holidays-at-universal-studios-hollywood",
       "desc": "你们去过的地方，这次是圣诞版。"
     },
     {
-      "when": "11.13–1.3",
+      "when": "11.13–次年 1.3",
       "name": "South Coast 植物园灯光夜",
+      "url": "https://tinkerbellsneverland.com/los-angeles/",
       "desc": "中间点的灯会，两个人都方便。"
     },
     {
-      "when": "12.3–17",
+      "when": "12.3–6、10–13、17–22",
       "name": "Sherman 植物园灯光夜",
-      "desc": "Corona del Mar 的小花园灯光。"
+      "url": "https://experience.thesherman.org/merry-and-bright-nights",
+      "desc": "Corona del Mar 的 Merry & Bright Nights，分时段入场。"
     },
     {
       "when": "12.5",
       "name": "Crystal Cove 圣诞点灯",
+      "url": "https://crystalcove.org/event/30th-annual-tree-lighting/",
       "desc": "海边小木屋的点灯和节日集市。"
     },
     {
       "when": "12.6",
       "name": "Corona del Mar 圣诞散步",
+      "url": "https://www.cdmchamber.com/events/47th-annual-corona-del-mar-christmas-walk/",
       "desc": "街上有音乐、小吃和装饰。"
     },
     {
       "when": "12.16–20",
       "name": "Newport 圣诞游船巡游",
+      "url": "https://www.christmasboatparade.com/",
       "desc": "百年传统的海湾灯光船队，可以订游船从水上看。"
     }
   ],
@@ -872,7 +886,7 @@ export const GUIDE: Record<string, Guide> = {
       }
     ],
     "steps": [
-      "早上风小的时候去",
+      "出发前查看海湾风况",
       "在 Newport Aquatic Center 租双人皮划艇",
       "沿湿地慢慢划，看水鸟",
       "划完在 Back Bay 步道散散步"
@@ -1256,7 +1270,7 @@ export const GUIDE: Record<string, Guide> = {
       }
     ],
     "steps": [
-      "12 月到 4 月是观鲸季",
+      "选好观鲸的日子",
       "先去小展览馆看鲸鱼介绍",
       "沿悬崖步道找海面上的喷水",
       "顺路去 Terranea 看日落"
@@ -1472,7 +1486,7 @@ export const GUIDE: Record<string, Guide> = {
       }
     ],
     "steps": [
-      "挑没有月亮的晚上，出发前查月相",
+      "出发前查月相",
       "白天去 Skull Rock 和 Keys View",
       "傍晚到 Cholla 仙人掌园",
       "天黑后躺下来看银河"
@@ -1544,7 +1558,7 @@ export const QUESTION_LEVELS: Record<QuestionLevel, string> = {
   "l1": "轻松",
   "l2": "走心",
   "l3": "脑洞",
-  "l4": "🔥 心动"
+  "l4": "心动"
 };
 export const QUESTIONS: Record<QuestionLevel, string[]> = {
   "l1": [

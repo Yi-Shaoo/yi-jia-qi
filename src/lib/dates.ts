@@ -63,8 +63,13 @@ export function filmStamp(key: string) {
 	return a.length === 3 ? `'${a[0].slice(2)} ${a[1]} ${a[2]}` : "";
 }
 
-export function filmStampTs(ts: number) {
-	return filmStamp(keyOf(new Date(ts)));
+export function recordDate(ts: unknown): Date | null {
+	return typeof ts === "number" && Number.isFinite(ts) && ts >= Date.UTC(2000, 0, 1) && ts < Date.UTC(2100, 0, 1) ? new Date(ts) : null;
+}
+
+export function uploadStamp(ts: number | undefined) {
+	const date = recordDate(ts);
+	return date ? `上传 ${filmStamp(keyOf(date))}` : "";
 }
 
 /** 11.19 08:30 */

@@ -10,6 +10,7 @@
  */
 :root {
 	--radius: 1rem;
+	--notice-bottom: 24px;
 
 	--background: #faf6ef;
 	--foreground: #14253d;
@@ -31,7 +32,7 @@
 	--ring: #1f5f86;
 
 	/* 方案 B 的额外颜色 */
-	--coral: #c4493a;
+	--coral: #af3c31;
 	--coral-soft: #fde8e2;
 	--sea: #1f5f86;
 	--sea-soft: #e3eef5;
@@ -41,7 +42,7 @@
 	--night: #14253d;
 	--night-ink: #f3efe6;
 	--stamp: #ff9a4a;
-	--yi: #c4493a;
+	--yi: #af3c31;
 	--yi-soft: #fde8e2;
 	--jq: #1f5f86;
 	--jq-soft: #e3eef5;
@@ -89,8 +90,8 @@
 	--sun: #ffa25c;
 	--sand: #2e2717;
 	--sand-ink: #f3dca8;
-	--night: #e8eef6;
-	--night-ink: #0c1320;
+	--night: #1b2d45;
+	--night-ink: #eef4fc;
 	--stamp: #ffa45c;
 	--yi: #ff8f7d;
 	--yi-soft: #3a2030;
@@ -210,7 +211,14 @@
 	/* 胶片相机日期戳 */
 	.film-stamp {
 		@apply font-mono tracking-[0.06em] text-stamp;
-		text-shadow: 0 0 6px color-mix(in srgb, var(--stamp) 70%, transparent);
+		display: inline-block;
+		width: fit-content;
+		border-radius: 4px;
+		background: #152739;
+		padding: 0.12em 0.45em;
+	}
+	.surface-card {
+		@apply rounded-xl bg-card ring-1 ring-border;
 	}
 	/* 拍立得 */
 	.polaroid {
@@ -219,5 +227,49 @@
 	}
 	.dark .polaroid {
 		@apply bg-[#f4efe6];
+	}
+}
+
+[data-slot="input"] { min-height: 44px; }
+h2[id^="memory-"] { scroll-margin-top: 5.5rem; }
+
+.photo-remove {
+	@apply absolute top-0 right-0 grid size-11 place-items-center rounded-lg text-white focus-visible:outline-2 focus-visible:outline-ring;
+}
+.photo-remove svg { @apply size-6 rounded-full bg-black/75 p-1; }
+
+.wish-check[data-slot="checkbox"] {
+	border: 0;
+	background: transparent;
+}
+.wish-check::after { display: none; }
+.wish-check [data-slot="checkbox-indicator"] {
+	width: 20px;
+	height: 20px;
+	border: 1px solid var(--muted-foreground);
+	border-radius: 6px;
+}
+.wish-check[aria-checked="true"] [data-slot="checkbox-indicator"] {
+	background: var(--primary);
+	border-color: var(--primary);
+	color: var(--primary-foreground);
+}
+
+@media (max-width: 767px) {
+	:root { --notice-bottom: calc(76px + env(safe-area-inset-bottom)); }
+	[data-slot="button"]:not([data-size="icon-xs"]) { min-height: 44px; }
+	[data-slot="button"][data-size^="icon"]:not([data-size$="xs"]) { min-width: 44px; }
+	@layer base {
+		:where(main a[href], main summary, main button:not([data-slot])) { min-height: 24px; }
+		:where(main a[href]) { display: inline-block; }
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }

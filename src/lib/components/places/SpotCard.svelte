@@ -1,24 +1,20 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
-	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
-	import MapButton from "$lib/components/MapButton.svelte";
-	import WishButton from "$lib/components/WishButton.svelte";
-	import SpotArt from "$lib/components/SpotArt.svelte";
+	import TravelCard from "./TravelCard.svelte";
 	import Lightbox from "$lib/components/Lightbox.svelte";
 	import ConfirmButton from "$lib/components/ConfirmButton.svelte";
-	import { AREA, GUIDE, SPOT_ICON, type ArtIcon } from "$lib/data/content";
+	import { AREA, GUIDE } from "$lib/data/content";
 	import { fileUrl } from "$lib/api";
 	import { useCollection } from "$lib/sync.svelte";
 	import { session } from "$lib/session.svelte";
-	import { uploadPhoto } from "$lib/upload";
+	import { photoErrorMessage, uploadPhoto } from "$lib/upload";
 	import { heartBurst } from "$lib/fx";
-	import { spotColorIndex, spotKey } from "$lib/spots";
+	import { spotKey } from "$lib/spots";
 	import { cn } from "$lib/utils";
 	import type { SpotState } from "$lib/types";
 	import Check from "@lucide/svelte/icons/check";
-	import Pencil from "@lucide/svelte/icons/pencil";
-	import ImageIcon from "@lucide/svelte/icons/images";
+	import ImagePlus from "@lucide/svelte/icons/image-plus";
 
 	let {
 		name,
@@ -27,7 +23,6 @@
 		desc,
 		tip,
 		q,
-		mine = false,
 		onedit,
 	}: {
 		name: string;
@@ -36,22 +31,14 @@
 		desc: string;
 		tip: string;
 		q: string;
-		mine?: boolean;
 		onedit?: () => void;
 	} = $props();
 
 	const spots = useCollection("spots");
 	const key = $derived(spotKey(name));
 	const spot = $derived<SpotState>(spots.get(key)?.data ?? { n: name, p: [], d: [] });
-	const guide = $derived(GUIDE[name]);
-	const ci = $derived(spotColorIndex(name));
-	const caps = $derived<{ label: string; icon: ArtIcon }[]>(
-		guide?.caps ?? [
-			{ label: "照片 1", icon: SPOT_ICON[type] ?? "heart" },
-			{ label: "照片 2", icon: "heart" },
-			{ label: "照片 3", icon: "star" },
-		],
-	);
+	const guide = $derived(Object.hasOwn(GUIDE, name) ? GUIDE[name] : undefined);
+	const caps = $derived(guide?.caps ?? [1, 2, 3].map((n) => ({ label: `照片 ${n}` })));
 	const doneCount = $derived(guide ? guide.steps.filter((_, i) => spot.d?.[i]).length : 0);
 
 	function save(next: { p?: string[]; d?: number[] }) {
@@ -94,8 +81,8 @@
 			p[i] = id;
 			await save({ p });
 			toast.success("照片放好啦");
-		} catch {
-			toast.error("照片没传上去，换一张试试");
+		} catch (error) {
+			toast.error(photoErrorMessage(error));
 		} finally {
 			busy = null;
 		}
@@ -119,7 +106,9 @@
 	const TILTS = ["-rotate-3", "rotate-2", "-rotate-1"];
 </script>
 
-<article class={cn("flex flex-col gap-3 rounded-[20px] bg-card p-5 shadow-[0_0_0_1px_var(--border)]", mine && "ring-2 ring-coral/30")}>
+<TravelCard {name} meta={[AREA[area as keyof typeof AREA], type]} {desc} {q} wish={name} cat="place" {onedit}
+	summary={guide ? `照片与攻略${spots.ready || spots.get(key) ? ` · 已完成 ${doneCount}/${guide.steps.length}` : ""}` : tip ? "照片与贴士" : "地点照片"}>
+	{#if tip}<p class="rounded-xl bg-sand px-3 py-2 text-[13px] text-sand-ink">{tip}</p>{/if}
 	<input bind:this={input} type="file" accept="image/*" class="hidden" onchange={onFile} />
 	<div class="mb-1 grid grid-cols-3 gap-2.5 px-1 pt-1">
 		{#each [0, 1, 2] as i (i)}
@@ -128,7 +117,8 @@
 				type="button"
 				onclick={() => clickSlot(i)}
 				class={cn("polaroid p-1.5 pb-2 transition-transform hover:-translate-y-0.5 hover:rotate-0", TILTS[i])}
-				aria-label={id ? `${caps[i]?.label}，看大图` : `${caps[i]?.label}，放一张照片`}
+				disabled={busy !== null || !spots.ready}
+				aria-label={`${name} · ${caps[i]?.label}，${id ? "看大图" : "加照片"}`}
 			>
 				<span class="relative block aspect-[5/4] overflow-hidden bg-muted">
 					{#if busy === i}
@@ -136,34 +126,25 @@
 					{:else if id}
 						<img src={fileUrl(id)} alt={caps[i]?.label} loading="lazy" class="size-full object-cover" />
 					{:else}
-						<SpotArt icon={caps[i]?.icon ?? "heart"} ci={ci + i} />
+						<span aria-hidden="true" class="grid size-full place-items-center text-muted-foreground"><ImagePlus class="size-5" /></span>
 					{/if}
 				</span>
-				<span class="mt-1 block truncate text-center text-[11px] text-[#5b6779]">{caps[i]?.label}</span>
+				<span class="mt-1 block truncate text-center text-[11px] text-[#5b6779]">{guide || id ? caps[i]?.label : "加照片"}</span>
 			</button>
 		{/each}
 	</div>
 
-	<div class="flex flex-wrap gap-1.5">
-		{#if mine}<Badge class="bg-coral-soft text-coral">我们加的</Badge>{/if}
-		{#if AREA[area as keyof typeof AREA]}<Badge variant="secondary">{AREA[area as keyof typeof AREA]}</Badge>{/if}
-		{#if type}<Badge variant="outline">{type}</Badge>{/if}
-	</div>
-	<h3 class="text-xl font-bold">{name}</h3>
-	{#if desc}<p class="text-[15px] leading-relaxed text-muted-foreground">{desc}</p>{/if}
-
 	{#if guide}
-		<div class="rounded-2xl bg-muted/60 p-4">
-			<div class="mb-2 flex items-center justify-between text-sm font-semibold">
-				小攻略<span class="text-xs font-normal text-muted-foreground">{doneCount ? `完成 ${doneCount}/${guide.steps.length}` : "一起打勾"}</span>
-			</div>
-			<ol class="flex flex-col gap-1">
+		<section class="rounded-2xl bg-muted/60 p-3.5">
+			<h3 class="text-sm font-semibold">小攻略</h3>
+			<ol class="mt-2 flex flex-col gap-1">
 				{#each guide.steps as s, i (i)}
 					{@const on = !!spot.d?.[i]}
 					<li>
 						<button
 							type="button"
 							aria-pressed={on}
+							disabled={!spots.ready}
 							onclick={(e) => toggleStep(i, e.currentTarget)}
 							class="flex w-full items-start gap-2.5 rounded-lg px-1 py-1.5 text-left text-sm hover:bg-background/60"
 						>
@@ -179,21 +160,13 @@
 				<span><b class="mr-2 font-semibold text-foreground">带上</b>{guide.bring}</span>
 				<span><b class="mr-2 font-semibold text-foreground">顺路吃</b>{guide.eat}</span>
 			</div>
-		</div>
+		</section>
 	{/if}
-	{#if tip}<p class="rounded-xl bg-sand px-3 py-2 text-[13px] text-sand-ink">💡 {tip}</p>{/if}
-
-	<div class="mt-auto flex flex-wrap gap-2 pt-1">
-		<MapButton {q} />
-		<Button variant="outline" size="sm" class="rounded-full" href={`https://www.google.com/maps/search/${encodeURIComponent(q)}`} target="_blank" rel="noopener external"><ImageIcon />更多照片</Button>
-		<WishButton text={name} />
-		{#if onedit}<Button variant="ghost" size="sm" class="rounded-full" onclick={onedit}><Pencil />编辑</Button>{/if}
-	</div>
-</article>
+</TravelCard>
 
 {#if viewing !== null && spot.p?.[viewing]}
 	<Lightbox bind:open={lbOpen} src={fileUrl(spot.p[viewing])} alt={name} title={`${name} · ${caps[viewing]?.label ?? ""}`}>
 		<Button variant="outline" size="sm" class="rounded-full" onclick={swapPhoto}>换一张</Button>
-		<ConfirmButton variant="outline" class="rounded-full" confirmLabel="确定拿掉？" onconfirm={removePhoto}>拿掉这张</ConfirmButton>
+		<ConfirmButton variant="outline" class="rounded-full" confirmLabel="确认移除" description={`从「${name}」的「${caps[viewing]?.label}」移除这张照片？`} onconfirm={removePhoto}>移除照片</ConfirmButton>
 	</Lightbox>
 {/if}

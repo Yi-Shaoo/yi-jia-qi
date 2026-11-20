@@ -1,0 +1,53 @@
+import { test, expect } from "./fixture";
+
+test("外观默认跟随系统，手动覆盖可持久化并能恢复自动", async ({ page, app }) => {
+	await app.docs("meta");
+	await page.emulateMedia({ colorScheme: "dark" });
+	await page.goto("/");
+	const root = page.locator("html"), menu = page.getByRole("button", { name: "账号菜单" });
+	await expect(root).toHaveClass(/\bdark\b/);
+	await menu.click();
+	await expect(page.getByRole("menuitemradio", { name: "跟随系统" })).toBeChecked();
+	await page.getByRole("menuitemradio", { name: "浅色模式" }).click();
+	await expect(root).not.toHaveClass(/\bdark\b/);
+	await page.reload();
+	await expect(menu).toBeVisible();
+	await expect(root).not.toHaveClass(/\bdark\b/);
+	await menu.click();
+	await page.getByRole("menuitemradio", { name: "跟随系统" }).click();
+	await expect(root).toHaveClass(/\bdark\b/);
+	await page.emulateMedia({ colorScheme: "light" });
+	await expect(root).not.toHaveClass(/\bdark\b/);
+});
+
+test("缩略图不放大小图；日期区分原戳、上传时间与无日期", async ({ page, app }) => {
+	const asset = await app.photo();
+	await app.put("photos", "old", { asset, cap: "旧数据", c: 1, tag: "sea" });
+	await app.put("photos", "upload", { asset, cap: "新上传", c: new Date(2026, 10, 19, 12).getTime(), tag: "sea" });
+	await app.put("photos", "source", { asset, cap: "原照", st: "'25 03 08", c: 0, tag: "sea" });
+	await page.goto("/album");
+	await expect(page.getByRole("button", { name: /查看第.*旧数据/ }).locator(".film-stamp")).toHaveCount(0);
+	await expect(page.getByRole("button", { name: /查看第.*新上传/ }).locator(".film-stamp")).toHaveText("上传 '26 11 19");
+	await expect(page.getByRole("button", { name: /查看第.*原照/ }).locator(".film-stamp")).toHaveText("'25 03 08");
+	await expect(page.getByRole("img", { name: "新上传" })).toHaveCSS("object-fit", "scale-down");
+	await page.route(`**/files/${asset}`, route => route.abort());
+	await page.reload();
+	await page.getByRole("button", { name: /查看第.*新上传/ }).click();
+	const viewer = page.getByRole("dialog");
+	await expect(viewer.getByText("照片没能打开。")).toBeVisible();
+	await page.unroute(`**/files/${asset}`);
+	await viewer.getByRole("button", { name: "重新加载照片" }).click();
+	await viewer.getByRole("img").evaluate(el => (el as HTMLImageElement).decode());
+	await page.keyboard.press("Escape");
+	const text = "傍晚一起走在海边。".repeat(60);
+	await app.put("memories", "note", { date: "2026-11-20", photos: [], c: 1, text, title: "最近的散步。".repeat(20) });
+	await app.put("memories", "photo", { date: "2026-11-19", photos: [asset], c: 1, text, title: "海边" });
+	await page.goto("/");
+	const photo = page.locator('a[href="/memories?item=photo"]');
+	await expect(photo.locator("img")).toHaveCSS("object-fit", "scale-down");
+	expect((await photo.locator(".line-clamp-2").last().boundingBox())!.height).toBeLessThan(45);
+	const note = page.locator('a[href="/memories?item=note"]');
+	expect((await note.boundingBox())!.height).toBeLessThan(250);
+	await note.click();
+	await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
+});

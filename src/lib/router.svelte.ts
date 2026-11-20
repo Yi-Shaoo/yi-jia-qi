@@ -15,6 +15,17 @@ export function navigate(to: string, opts: { replace?: boolean } = {}) {
 	window.scrollTo({ top: 0 });
 }
 
+export function replaceQuery(values: Record<string, string | null>) {
+	const url = new URL(location.href);
+	for (const [name, value] of Object.entries(values)) {
+		if (value) url.searchParams.set(name, value);
+		else url.searchParams.delete(name);
+	}
+	if (url.search === route.search) return;
+	history.replaceState(null, "", url);
+	route.search = url.search;
+}
+
 export function query(name: string): string | null {
 	return new URLSearchParams(route.search).get(name);
 }
@@ -33,5 +44,5 @@ document.addEventListener("click", (e) => {
 	const url = new URL(href, location.href);
 	if (url.origin !== location.origin || url.pathname.startsWith("/files/") || url.pathname.startsWith("/api/")) return;
 	e.preventDefault();
-	navigate(url.pathname + url.search);
+	navigate(url.pathname + url.search + url.hash);
 });

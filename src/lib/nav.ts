@@ -15,7 +15,7 @@ import Utensils from "@lucide/svelte/icons/utensils";
 export interface NavLink {
 	href: string;
 	label: string;
-	desc: string;
+	desc?: string;
 	icon: Component;
 }
 export interface NavGroup {
@@ -32,19 +32,19 @@ export const NAV_GROUPS: NavGroup[] = [
 		label: "我们的",
 		icon: Heart,
 		links: [
-			{ href: "/diary", label: "约会日记", desc: "同一天，两扇窗", icon: BookOpen },
-			{ href: "/memories", label: "我们的回忆", desc: "从认识那天到现在的每一站", icon: Clock },
-			{ href: "/album", label: "情侣相册", desc: "两个人的照片都放在这里", icon: Image },
-			{ href: "/about", label: "关于我们", desc: "我们各自喜欢的东西", icon: Users },
+			{ href: "/diary", label: "约会日记", desc: "两个人各写一边", icon: BookOpen },
+			{ href: "/memories", label: "我们的回忆", desc: "按日期回看", icon: Clock },
+			{ href: "/album", label: "情侣相册", desc: "按主题翻照片", icon: Image },
+			{ href: "/about", label: "关于我们", desc: "记住彼此的喜好", icon: Users },
 		],
 	},
 	{
 		key: "play",
-		label: "一起玩",
+		label: "互动",
 		icon: Gamepad2,
 		links: [
-			{ href: "/play", label: "一起玩", desc: "糯糯、每日一问、扭蛋机、漂流瓶…", icon: Gamepad2 },
-			{ href: "/wish", label: "心愿清单", desc: "想做的事，做完一件勾一件", icon: Star },
+			{ href: "/play", label: "一起玩", desc: "问答、小游戏和信箱", icon: Gamepad2 },
+			{ href: "/wish", label: "心愿清单", desc: "勾选想一起做的事", icon: Star },
 		],
 	},
 	{
@@ -52,10 +52,10 @@ export const NAV_GROUPS: NavGroup[] = [
 		label: "出去玩",
 		icon: MapPin,
 		links: [
-			{ href: "/dates", label: "约会去哪", desc: "Irvine、Westwood 和两人的中间点", icon: MapPin },
-			{ href: "/food", label: "今天吃什么", desc: "拉面、烤肉、海边早午餐", icon: Utensils },
-			{ href: "/roadtrip", label: "Road-trip", desc: "从一日游到长周末", icon: Car },
-			{ href: "/holiday", label: "感恩节和圣诞", desc: "今年南加州的灯会和游船", icon: Gift },
+			{ href: "/dates", label: "约会去哪", desc: "按地区找见面地点", icon: MapPin },
+			{ href: "/food", label: "今天吃什么", desc: "找两边校园附近的餐厅", icon: Utensils },
+			{ href: "/roadtrip", label: "Road-trip", desc: "按天数挑自驾路线", icon: Car },
+			{ href: "/holiday", label: "感恩节和圣诞", desc: "查活动日期和出处", icon: Gift },
 		],
 	},
 ];

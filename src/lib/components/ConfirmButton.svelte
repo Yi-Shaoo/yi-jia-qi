@@ -1,32 +1,48 @@
 <script lang="ts">
-	import { Button, type ButtonProps } from "$lib/components/ui/button";
 	import type { Snippet } from "svelte";
+	import { Button, type ButtonProps } from "$lib/components/ui/button";
+	import * as AlertDialog from "$lib/components/ui/alert-dialog";
 
-	/** 点两下才执行：第一下变成“确定？”，3 秒内再点才真的删除 */
 	let {
-		onconfirm,
-		confirmLabel = "确定删除？",
-		children,
-		variant = "ghost",
-		size = "sm",
-		class: className,
-		...rest
-	}: { onconfirm: () => void; confirmLabel?: string; children: Snippet } & Omit<ButtonProps, "onclick"> = $props();
+		onconfirm, confirmLabel, description, children,
+		variant = "ghost", size = "sm", class: className, disabled, ...rest
+	}: {
+		onconfirm: () => void | Promise<unknown>;
+		confirmLabel?: string;
+		description?: string;
+		children: Snippet;
+	} & Omit<ButtonProps, "onclick"> = $props();
 
+	const action = $derived(confirmLabel ?? (rest["aria-label"] ? `确认${rest["aria-label"]}` : "确认删除"));
 	let sure = $state(false);
-	let timer = 0;
-	function click() {
-		if (!sure) {
-			sure = true;
-			clearTimeout(timer);
-			timer = window.setTimeout(() => (sure = false), 3000);
-			return;
+	let busy = $state(false);
+
+	async function confirm() {
+		if (busy || !sure) return;
+		busy = true;
+		try {
+			await onconfirm();
+		} finally {
+			sure = false;
+			busy = false;
 		}
-		sure = false;
-		onconfirm();
 	}
 </script>
 
-<Button {...rest} variant={sure ? "destructive" : variant} size={sure ? "sm" : size} class={className} onclick={click}>
-	{#if sure}{confirmLabel}{:else}{@render children()}{/if}
-</Button>
+	<AlertDialog.Root bind:open={sure}>
+		<AlertDialog.Trigger disabled={disabled || busy}>
+			{#snippet child({ props })}
+				<Button {...rest} {...props} {variant} {size} class={className}>{@render children()}</Button>
+			{/snippet}
+		</AlertDialog.Trigger>
+		<AlertDialog.Content class="max-h-[90dvh] overflow-y-auto" escapeKeydownBehavior={busy ? "ignore" : "close"}>
+			<AlertDialog.Header>
+				<AlertDialog.Title class="wrap-anywhere">{action}</AlertDialog.Title>
+				<AlertDialog.Description class="wrap-anywhere">{description || "删除后无法恢复。"}</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer class="flex-col sm:flex-row">
+				<AlertDialog.Cancel disabled={busy}>取消</AlertDialog.Cancel>
+				<AlertDialog.Action variant="destructive" class="h-auto min-h-9 whitespace-normal wrap-anywhere" disabled={busy} onclick={confirm}>{action}</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>

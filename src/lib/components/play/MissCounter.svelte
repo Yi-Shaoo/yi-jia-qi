@@ -3,17 +3,24 @@
 	import { toast } from "svelte-sonner";
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
+	import { Label } from "$lib/components/ui/label";
+	import { sendMissNote, type MissNoteDraft } from "./miss-note";
 	import PlayCard from "./PlayCard.svelte";
 	import { useCollection } from "$lib/sync.svelte";
-	import { session } from "$lib/session.svelte";
+	import { me as account, session } from "$lib/session.svelte";
 	import { heartBurst } from "$lib/fx";
 	import { fmtTime, keyOf, todayKey } from "$lib/dates";
-	import { WHO, otherOf, type Who } from "$lib/types";
+	import { WHO, otherOf } from "$lib/types";
 	import { cn } from "$lib/utils";
+
+	import Heart from "@lucide/svelte/icons/heart";
+	import Flame from "@lucide/svelte/icons/flame";
+
+	let { id }: { id: string } = $props();
 
 	/** 想你计数器：可以连着狂点，停 1.1 秒记一次连击 */
 	const miss = useCollection("miss");
-	const me = $derived(session.who as Who);
+	const me = account();
 	const today = todayKey();
 	const nOf = (n: number) => (n > 0 ? Math.min(Math.floor(n), 99) : 1);
 
@@ -32,22 +39,27 @@
 
 	let combo = $state(0);
 	let beat = $state(false);
-	let note = $state("");
+	const draft = $state<MissNoteDraft>({ text: "", edits: 0, sending: false });
+	let noteInput = $state<HTMLInputElement | null>(null);
 	let timer = 0;
 	let btn: HTMLButtonElement;
 
 	async function flush(text = "") {
 		clearTimeout(timer);
-		let n = combo;
+		const taps = combo;
+		if (!taps && !text) return;
 		combo = 0;
-		if (!n && !text) return;
-		if (!n) n = 1;
+		const n = taps || 1;
 		try {
-			await miss.add({ who: me, n: Math.min(n, 99), note: text.slice(0, 40), c: Date.now() });
+			await miss.add({ who: me, n, note: text, c: Date.now() });
 			toast(n > 1 ? `一口气想了 ${WHO[otherOf(me)]} ${n} 次，已经告诉 TA 了` : `已经告诉 ${WHO[otherOf(me)]} 你想 TA 了`);
-		} catch {
-			toast.error("没存上，再试一次");
+		} catch (error) {
+			combo = Math.min(99, combo + taps);
+			throw error;
 		}
+	}
+	function settleTaps() {
+		flush().catch(() => toast.error("连击没存上，再点一次重试"));
 	}
 	function tap() {
 		beat = false;
@@ -55,31 +67,38 @@
 		combo = Math.min(combo + 1, 99);
 		heartBurst(btn, Math.min(3 + combo, 14), 40 + combo * 4);
 		clearTimeout(timer);
-		timer = window.setTimeout(() => flush(), 1100);
+		timer = window.setTimeout(settleTaps, 1100);
 	}
-	function send(e: SubmitEvent) {
+	async function send(e: SubmitEvent) {
 		e.preventDefault();
-		if (!combo) heartBurst(btn);
-		flush(note.trim());
-		note = "";
+		try {
+			await sendMissNote(draft, (text) => {
+				noteInput?.focus({ preventScroll: true });
+				if (!combo) heartBurst(btn);
+				return flush(text);
+			});
+		} catch {
+			toast.error("留言没发出，请再试一次");
+		}
 	}
 	onMount(() => {
 		const onHide = () => {
-			if (document.hidden && combo) flush();
+			if (document.hidden && combo) settleTaps();
 		};
 		document.addEventListener("visibilitychange", onHide);
 		return () => {
 			document.removeEventListener("visibilitychange", onHide);
-			if (combo) flush();
+			clearTimeout(timer);
+			if (combo && session.who === me) settleTaps();
 		};
 	});
 </script>
 
-<PlayCard title="想你计数器" meta={`今天一共 ${counts.c.yi + counts.c.jq} 次`}>
+<PlayCard {id} title="想你计数器" meta={`今天一共 ${counts.c.yi + counts.c.jq} 次`}>
 	<div class="grid grid-cols-2 gap-2 text-sm">
 		{#each ["yi", "jq"] as const as w (w)}
 			<div class={cn("rounded-xl px-3 py-2", w === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>
-				今天 {WHO[w]} 想了 {WHO[otherOf(w)]}
+				{WHO[w]} 想了 {WHO[otherOf(w)]}
 				<b class="font-display text-xl">{counts.c[w]}</b> 次
 				{#if counts.best[w] > 1}<small class="block text-xs text-muted-foreground">最高 x{counts.best[w]} 连击</small>{/if}
 			</div>
@@ -91,18 +110,24 @@
 			type="button"
 			onclick={tap}
 			aria-label="想你了，可以连着点"
-			class={cn("flex size-28 items-center justify-center rounded-full bg-coral text-5xl text-white shadow-[0_10px_30px_-8px_var(--coral)] transition-transform active:scale-95", beat && "animate-beat")}
+			class={cn("flex size-28 items-center justify-center rounded-full bg-coral text-5xl text-primary-foreground shadow-[0_10px_30px_-8px_var(--coral)] transition-transform active:scale-95", beat && "animate-beat")}
 		>
-			♥
+			<Heart aria-hidden="true" class="size-12 fill-current" />
 		</button>
 		<div aria-live="polite" class={cn("h-7 font-display text-lg font-extrabold", combo >= 10 ? "text-coral" : combo >= 5 ? "text-sun" : "text-sea")}>
 			{combo ? `x${combo} ${combo >= 10 ? "超级连击！" : "连击！"}` : ""}
 		</div>
-		<p class="text-xs text-muted-foreground">可以连着狂点，停下来 1 秒就会记一次连击</p>
+		<p class="text-xs text-muted-foreground">连点爱心，停约 1 秒后结算。</p>
 	</div>
-	<form onsubmit={send} class="flex gap-2">
-		<Input bind:value={note} maxlength={40} placeholder="想说的一句话（可以不写）" aria-label="附一句话" />
-		<Button type="submit" class="rounded-full">想你了</Button>
+	<form onsubmit={send} class="flex flex-col gap-2">
+		<div class="flex items-baseline gap-2">
+			<Label for="miss-note">附言</Label>
+			<small id="miss-note-count" class="text-xs text-muted-foreground">单发留言也计 1 次</small>
+		</div>
+		<div class="flex items-center gap-2">
+			<Input id="miss-note" aria-describedby="miss-note-count" bind:ref={noteInput} bind:value={draft.text} oninput={() => draft.edits++} maxlength={40} />
+			<Button type="submit" class="rounded-full" disabled={draft.sending || !draft.text.trim()}>{draft.sending ? "发送中…" : "发送留言"}</Button>
+		</div>
 	</form>
 	<div class="flex flex-col gap-2">
 		<div class="text-sm font-semibold">想你记录</div>
@@ -113,9 +138,9 @@
 				<div class="flex items-center gap-2">
 					<span class="w-20 shrink-0 font-mono text-xs text-muted-foreground">{fmtTime(m.data.c, keyOf(new Date(m.data.c)) !== today)}</span>
 					<span class={cn("font-semibold", m.data.who === "yi" ? "text-yi" : "text-jq")}>{WHO[m.data.who]}</span>
-					<span>{n > 1 ? `一口气想了你 ${n} 次${n >= 10 ? " 🔥🔥" : n >= 5 ? " 🔥" : ""}` : "想了你一下"}</span>
+					<span>{n > 1 ? `一口气想了你 ${n} 次` : "想了你一下"}{#if n >= 5}<Flame aria-hidden="true" class="ml-1 inline size-4 text-coral" />{/if}</span>
 				</div>
-				{#if m.data.note}<div class={cn("ml-22 rounded-xl px-3 py-1.5", m.data.who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>{m.data.note}</div>{/if}
+				{#if m.data.note}<div class={cn("ml-22 rounded-xl px-3 py-1.5 wrap-anywhere", m.data.who === "yi" ? "bg-yi-soft" : "bg-jq-soft")}>{m.data.note}</div>{/if}
 			</div>
 		{/each}
 	</div>
