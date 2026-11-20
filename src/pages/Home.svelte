@@ -154,18 +154,18 @@
 
 <!-- 倒计时 -->
 <section
-	class="relative mx-0 mt-1 grid grid-cols-2 overflow-hidden rounded-xl bg-card shadow-[0_0_0_1px_var(--border),0_12px_30px_rgb(20_37_61/0.08)] md:mx-12 md:-mt-11 md:grid-cols-4"
+	class="relative mx-0 mt-1 grid grid-cols-2 gap-2.5 md:mx-12 md:-mt-11 md:grid-cols-4"
 	aria-label="倒计时"
 >
-	<div class="flex flex-col gap-0.5 border-b border-r p-4 md:border-b-0 md:px-6 md:py-5">
+	<div class="countdown-tile">
 		<span class="font-display text-4xl leading-none font-extrabold text-coral md:text-[44px]">{together}<small class="ml-1 text-base font-semibold text-muted-foreground">天</small></span>
 		<span class="text-[13px] text-muted-foreground">在一起 · 从 11.05</span>
 	</div>
-	<div class="flex flex-col gap-0.5 border-b p-4 md:border-b-0 md:border-r md:px-6 md:py-5">
+	<div class="countdown-tile">
 		<span class="font-display text-4xl leading-none font-extrabold md:text-[44px]">{met}<small class="ml-1 text-base font-semibold text-muted-foreground">天</small></span>
 		<span class="text-[13px] text-muted-foreground">认识 · 从 10.11</span>
 	</div>
-	<div class="flex flex-col gap-0.5 border-r p-4 md:px-6 md:py-5">
+	<div class="countdown-tile">
 		{#if holiday}
 			<span class="font-display text-4xl leading-none font-extrabold md:text-[44px]">{holiday.n}<small class="ml-1 text-base font-semibold text-muted-foreground">天</small></span>
 			<span class="text-[13px] text-muted-foreground">{holiday.label} · <span class="whitespace-nowrap">{fmtShort(holiday.date)} {weekday(holiday.date)}</span></span>
@@ -174,7 +174,7 @@
 			<span class="text-[13px] text-muted-foreground">2026 感恩节和圣诞</span>
 		{/if}
 	</div>
-	<div class="flex flex-col gap-0.5 p-4 md:px-6 md:py-5">
+	<div class="countdown-tile">
 		{#if nextDays === null}
 			<span class="font-display text-4xl leading-none font-extrabold text-muted-foreground/50 md:text-[44px]">—</span>
 		{:else}
@@ -324,6 +324,40 @@
 </p>
 
 <style>
+	/* 倒计时：四块独立的奶油色磨砂玻璃，压在照片底边时透出模糊的照片 */
+	.countdown-tile {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 1rem;
+		border-radius: 18px;
+		background: rgb(255 250 243 / 62%);
+		-webkit-backdrop-filter: blur(24px) saturate(150%);
+		backdrop-filter: blur(24px) saturate(150%);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 90%),
+			inset 0 0 0 1px rgb(255 255 255 / 55%),
+			0 0 0 1px rgb(120 90 60 / 7%),
+			0 10px 26px rgb(60 40 20 / 10%);
+	}
+	.countdown-tile .text-muted-foreground {
+		color: rgb(38 52 70 / 88%);
+	}
+	:global(.dark) .countdown-tile {
+		background: rgb(30 36 50 / 55%);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 12%),
+			inset 0 0 0 1px rgb(255 255 255 / 7%),
+			0 10px 26px rgb(0 0 0 / 35%);
+	}
+	:global(.dark) .countdown-tile .text-muted-foreground {
+		color: rgb(222 230 242 / 78%);
+	}
+	@media (min-width: 48rem) {
+		.countdown-tile {
+			padding: 1.25rem 1.5rem;
+		}
+	}
 	/* 封面：照片保持原色；桌面签名压在照片左下，只在那一角加一层很轻的暗角 */
 	.cover {
 		--left: clamp(24px, 2.6vw, 30px);

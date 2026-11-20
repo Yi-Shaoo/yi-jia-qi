@@ -1,6 +1,6 @@
 import { test, expect } from "./fixture";
 
-test("封面照片上半部保留原色，桌面白色手写签名压在左下暗角，窄屏签名在照片下方", async ({ page, app }) => {
+test("封面照片上半部保留原色，桌面白色手写签名压在左下暗角，窄屏签名在照片下方；倒计时为四块磨砂玻璃", async ({ page, app }) => {
 	await app.put("meta", "shared", { hero: await app.photo() });
 	await page.goto("/");
 	const image = page.getByRole("img", { name: "我们的封面照片" });
@@ -39,6 +39,12 @@ test("封面照片上半部保留原色，桌面白色手写签名压在左下�
 			expect(title.x).toBeLessThan(photo.x + photo.width * 0.4);
 			expect(look.color).toBe("rgb(255, 255, 255)");
 			expect(look.shade).toContain("radial-gradient");
+		}
+		const tiles = page.getByRole("region", { name: "倒计时" }).locator(":scope > div");
+		await expect(tiles).toHaveCount(4);
+		for (const glass of await tiles.evaluateAll((list) => list.map((el) => getComputedStyle(el)))) {
+			expect(glass.backdropFilter).toContain("blur");
+			expect(glass.backgroundColor).toMatch(/rgba\(.*, 0\.\d+\)/);
 		}
 	}
 });
