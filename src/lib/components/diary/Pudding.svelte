@@ -4,7 +4,7 @@
 	import { onDestroy } from "svelte";
 	import { heartBurst, pick } from "$lib/fx";
 
-	/** 布丁：日记页的小纸杯蛋糕吉祥物，戳一下会说话（从旧版移植） */
+	/** 布丁：日记页的小纸杯蛋糕吉祥物，坐在最新一张日记卡片的右上沿，戳一下会说话（从旧版移植） */
 	const LINES = [
 		"欢迎光临，今天想点什么约会？",
 		"写完记得点“发布”哦",
@@ -19,13 +19,16 @@
 	];
 	let say = $state("戳戳我");
 	let hop = $state(false);
+	let cherry = $state(false);
 	let btn = $state<HTMLButtonElement | null>(null);
 	let t = 0;
 	onDestroy(() => clearTimeout(t));
 
-	export function cheer(text = "出餐成功！这篇日记好甜") {
+	/** 发布日记后：换台词、弹跳，头顶的樱桃蹦一下 */
+	export function cheer(text = "盖好邮戳啦，这篇日记好甜") {
 		speak(text);
-		heartBurst(btn, 10, 50);
+		cherry = false;
+		requestAnimationFrame(() => (cherry = true));
 	}
 	function speak(s: string) {
 		say = s;
@@ -44,7 +47,7 @@
 
 <div class="diary-pudding">
 	<div role="status" class="pudding-bubble">{say}</div>
-	<Button bind:ref={btn} variant="surface" onclick={poke} aria-label="戳一下布丁" class={cn("pudding-button", hop && "animate-pop")}>
+	<Button bind:ref={btn} variant="surface" onclick={poke} aria-label="戳一下布丁" class={cn("pudding-button", hop && "pudding-hop", cherry && "pudding-cherry-go")}>
 		<svg viewBox="0 0 120 128" class="block w-full" aria-hidden="true">
 			<ellipse cx="60" cy="122" rx="30" ry="4.5" fill="#000" opacity=".08" />
 			<ellipse cx="18" cy="80" rx="6.5" ry="8.5" fill="#fff4e4" stroke="#ffd6c2" stroke-width="2" />
@@ -57,8 +60,10 @@
 			<rect x="74" y="36" width="3" height="7" rx="1.5" fill="#fde58a" transform="rotate(30 75 39)" />
 			<rect x="86" y="54" width="3" height="7" rx="1.5" fill="#caf2c0" transform="rotate(-10 87 57)" />
 			<rect x="30" y="58" width="3" height="7" rx="1.5" fill="#d7c4ff" transform="rotate(40 31 61)" />
-			<path d="M60 24 c-3 -8 4 -14 8 -10" fill="none" stroke="#7aa35a" stroke-width="2.4" stroke-linecap="round" />
-			<circle cx="60" cy="28" r="8" fill="#f08aa6" /><circle cx="57" cy="25" r="2.2" fill="#fff" opacity=".7" />
+			<g class="pudding-cherry">
+				<path d="M60 24 c-3 -8 4 -14 8 -10" fill="none" stroke="#7aa35a" stroke-width="2.4" stroke-linecap="round" />
+				<circle cx="60" cy="28" r="8" fill="#f08aa6" /><circle cx="57" cy="25" r="2.2" fill="#fff" opacity=".7" />
+			</g>
 			<ellipse cx="50" cy="58" rx="4" ry="5" fill="#4a2a36" /><circle cx="51.5" cy="56" r="1.4" fill="#fff" />
 			<ellipse cx="70" cy="58" rx="4" ry="5" fill="#4a2a36" /><circle cx="71.5" cy="56" r="1.4" fill="#fff" />
 			<ellipse cx="41" cy="66" rx="5.5" ry="3.2" fill="#ff8fae" opacity=".55" /><ellipse cx="79" cy="66" rx="5.5" ry="3.2" fill="#ff8fae" opacity=".55" />

@@ -1,6 +1,18 @@
-.diary-pudding { display: grid; justify-items: center; align-content: center; gap: .4rem; }
-.pudding-bubble { border-radius: var(--radius); background: var(--muted); color: var(--muted-foreground); padding: .3rem .75rem; font-size: .8rem; text-align: center; }
-.pudding-button { width: clamp(64px, 8vw, 90px); border-radius: var(--radius); cursor: pointer; }
+.diary-shelf { position: relative; padding-top: 3.6rem; }
+.diary-pudding { position: absolute; top: 0; right: 1.25rem; z-index: 1; display: flex; align-items: flex-end; gap: .4rem; }
+.pudding-bubble { position: relative; margin-bottom: 1.9rem; max-width: min(15rem, calc(100vw - 9rem)); border-radius: var(--radius); background: var(--muted); color: var(--muted-foreground); padding: .3rem .75rem; font-size: .8rem; text-align: center; text-wrap: pretty; }
+.pudding-bubble::after { content: ""; position: absolute; right: -5px; bottom: .5rem; border: 5px solid transparent; border-right: 0; border-left-color: var(--muted); }
+.pudding-button { width: 64px; flex: none; border-radius: var(--radius); cursor: pointer; }
+.pudding-hop { animation: pudding-hop .6s cubic-bezier(.3,1.6,.5,1); }
+.pudding-cherry { transform-box: fill-box; transform-origin: center bottom; }
+.pudding-cherry-go .pudding-cherry { animation: pudding-cherry .7s ease-out; }
+@keyframes pudding-hop { 30% { transform: scale(1.12,.9); } 55% { transform: scale(.94,1.08) translateY(-8px); } 80% { transform: scale(1.03,.98); } }
+@keyframes pudding-cherry { 40% { transform: translateY(-22px) rotate(25deg); } }
+.diary-stamp { position: absolute; top: 50%; left: 50%; z-index: 2; display: grid; place-content: center; width: 7rem; height: 7rem; margin: -3.5rem 0 0 -3.5rem; border: 4px double var(--candy-logo); border-radius: 50%; background: color-mix(in srgb, var(--card) 85%, transparent); color: var(--candy-logo); font: 700 .72rem/1.35 var(--font-mono); text-align: center; pointer-events: none; transform: rotate(-12deg); animation: stamp-slam .45s cubic-bezier(.2,.9,.3,1.2) both, stamp-fade .6s 2.4s forwards; }
+.diary-stamp b { font-size: 1.15rem; letter-spacing: .15em; }
+@keyframes stamp-slam { 0% { opacity: 0; transform: scale(2.4) rotate(-30deg); } 55% { opacity: 1; transform: scale(.92) rotate(-12deg); } 70% { transform: scale(1.04) rotate(-12deg); } }
+@keyframes stamp-fade { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pudding-hop, .pudding-cherry-go .pudding-cherry { animation: none; } .diary-stamp { animation: stamp-fade .6s 2.4s forwards; } }
 .diary-postcards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1rem; }
 .post-address { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; width: 100%; }
 .post-from { display: grid; justify-items: start; min-width: 0; }

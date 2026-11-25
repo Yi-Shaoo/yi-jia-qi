@@ -19,6 +19,7 @@
 	import PageHeader from "$lib/components/PageHeader.svelte";
 	import EmptyState from "$lib/components/EmptyState.svelte";
 	import { Card } from "$lib/components/ui/card";
+	import { reducedMotion, sprinkleRain } from "$lib/fx";
 
 	const diary = useCollection("diary");
 	const diaryAction = $derived(todayDiaryAction(diary, session.who, $localDay));
@@ -44,6 +45,40 @@
 		if (!editor) {
 			toast.error("没能打开这篇日记或草稿，请重新选择。");
 		}
+	}
+
+	/** 发布后的庆祝：撒糖针、布丁欢呼，并在这篇日记卡片上盖一枚「已寄出」邮戳 */
+	function celebrate(id: string, date: string) {
+		sprinkleRain();
+		pudding?.cheer();
+		let tries = 0;
+		const find = () => {
+			const card = document.querySelector<HTMLElement>(`[data-diary-id="${CSS.escape(id)}"]`);
+			if (card) postmark(card, date);
+			else if (++tries < 60) requestAnimationFrame(find);
+		};
+		find();
+	}
+
+	function postmark(card: HTMLElement, date: string) {
+		const r = card.getBoundingClientRect();
+		const offscreen = r.bottom < 0 || r.top > window.innerHeight;
+		if (offscreen) card.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
+		setTimeout(() => {
+			card.querySelector(".diary-stamp")?.remove();
+			const stamp = document.createElement("div");
+			stamp.className = "diary-stamp";
+			stamp.setAttribute("aria-hidden", "true");
+			for (const [tag, text] of [["span", "YI & JQ"], ["b", "已寄出"], ["span", date.replaceAll("-", ".")]]) {
+				stamp.appendChild(document.createElement(tag)).textContent = text;
+			}
+			card.appendChild(stamp);
+			if (!reducedMotion()) card.animate(
+				[{ transform: "none" }, { transform: "translate(-2px,1px)" }, { transform: "translate(2px,-1px)" }, { transform: "translate(-1px,1px)" }, { transform: "none" }],
+				{ duration: 250, delay: 250 },
+			);
+			setTimeout(() => stamp.remove(), 3100);
+		}, offscreen ? 500 : 0);
 	}
 
 	$effect(() => {
@@ -76,6 +111,8 @@
 	</section>
 {/if}
 
+<div class="diary-shelf">
+<Pudding bind:this={pudding} />
 <CollectionNotice status={diary.status} retry={() => diary.load()} label="日记" />
 {#if diary.ready && !diary.docs.length}
 	<EmptyState message="还没有日记。" />
@@ -85,7 +122,7 @@
 
 <div class="grid gap-5">
 	{#each list as d (d.id)}
-		<Card as="article" variant="surface" class="min-w-0 p-5 md:p-6" aria-labelledby={`diary-title-${d.id}`}>
+		<Card as="article" variant="surface" class="relative min-w-0 p-5 md:p-6" data-diary-id={d.id} aria-labelledby={`diary-title-${d.id}`}>
 			<div class="flex flex-wrap items-center gap-2">
 				<time datetime={d.data.date} class="font-mono text-sm font-medium whitespace-nowrap text-foreground tabular-nums">{d.data.date.replaceAll("-", ".")}</time>
 				<Badge variant={d.data.kind === "apart" ? "outline" : "secondary"}>
@@ -102,9 +139,9 @@
 		</Card>
 	{/each}
 </div>
-<div class="mt-6"><Pudding bind:this={pudding} /></div>
+</div>
 </section>
 
 {#if editor}
-	<DiaryEditor target={editor} onclose={() => (editor = null)} onsaved={() => pudding?.cheer()} />
+	<DiaryEditor target={editor} onclose={() => (editor = null)} onsaved={celebrate} />
 {/if}

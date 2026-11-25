@@ -20,7 +20,7 @@
 	import ImagePlus from "@lucide/svelte/icons/image-plus";
 	import X from "@lucide/svelte/icons/x";
 
-	let { target, onclose, onsaved }: { target: EditorTarget; onclose: () => void; onsaved: () => void } = $props();
+	let { target, onclose, onsaved }: { target: EditorTarget; onclose: () => void; onsaved: (id: string, date: string) => void } = $props();
 	const { who, item, date, key, draft } = untrack(() => target);
 	const diary = useCollection("diary");
 	const other = otherOf(who);
@@ -176,7 +176,7 @@
 			finish();
 			toast.success(sideHasContent(saved.data[other]) ? "日记已发布，两边都写好了" : `日记已发布，另一边留给 ${WHO[other]}`);
 			if (!cleared) toast.warning("日记已发布，但没能清除本机草稿");
-			onsaved();
+			onsaved(saved.id, saved.data.date);
 		} catch (e) {
 			err = busy === "upload" ? photoErrorMessage(e) : "没能发布日记，内容还在，请重试。";
 		} finally {
